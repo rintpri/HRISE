@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HRIS - Attendance & Approval System</title>
     <link rel="stylesheet" href="style.css">
-    <!-- Library untuk Export Excel -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
@@ -30,28 +29,14 @@
         <div id="loginScreen" class="login-screen hidden">
             <h2>🔐 Login HRIS</h2>
             <div class="form-group">
-                <label>Email</label>
-                <input type="text" id="loginEmail" value="admin@hris.com" placeholder="email@hris.com">
+                <label>Nama Depan</label>
+                <input type="text" id="loginEmail" placeholder="Masukkan nama depan Anda">
             </div>
             <div class="form-group">
                 <label>Password</label>
-                <input type="password" id="loginPassword" value="admin123" placeholder="Password">
-            </div>
-            <div class="form-group">
-                <label>Role</label>
-                <select id="loginRole">
-                    <option value="admin">Admin</option>
-                    <option value="atasan">Atasan</option>
-                    <option value="karyawan">Karyawan</option>
-                </select>
+                <input type="password" id="loginPassword" placeholder="Password (default: pass123)">
             </div>
             <button class="btn btn-primary btn-full" id="loginBtn">Masuk</button>
-            <p class="login-hint">
-                Akun Demo:<br>
-                <strong>Admin:</strong> admin@hris.com / admin123<br>
-                <strong>Atasan:</strong> atasan@hris.com / atasan123<br>
-                <strong>Karyawan:</strong> karyawan@hris.com / karyawan123
-            </p>
             <div id="apiStatus" class="api-status"></div>
         </div>
 
