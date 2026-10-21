@@ -138,7 +138,6 @@ function renderApp() {
 function getTabsForRole() {
     const t = [{ id: 'dashboard', label: '📊 Dashboard' }, { id: 'absensi', label: '📍 Absensi' }, { id: 'izin', label: '📝 Izin/Cuti' }, { id: 'profil', label: '👤 Profil' }];
     
-    // Cek apakah user adalah atasan/supervisor/manager/admin
     const level = String(currentUser.levelJabatan || '').toLowerCase();
     const isSupervisor = currentUser.role === 'atasan' || currentUser.role === 'admin' || level === 'supervisor' || level === 'manager';
     
@@ -173,16 +172,11 @@ function renderTabContent() {
         pengaturan: renderPengaturan, rekap: renderRekap 
     };
     const fn = map[currentTab] || renderDashboard;
-    try { 
-        fn(c); 
-    } catch (err) { 
-        console.error(err);
-        c.innerHTML = `<div class="card" style="color:red;">Error memuat halaman: ${err.message}</div>`; 
-    }
+    try { fn(c); } catch (err) { c.innerHTML = `<div class="card" style="color:red;">Error: ${err.message}</div>`; }
 }
 
 // ============================================================
-// 1. DASHBOARD (Jam Berjalan, Absen, Sisa Cuti)
+// 1. DASHBOARD
 // ============================================================
 function renderDashboard(container) {
     const today = todayStr();
@@ -224,7 +218,7 @@ function renderDashboard(container) {
                         </div>
                     </div>
                     <div class="info-box">
-                        <strong>ℹ️ Info:</strong> Batas kerja normal adalah <strong>9 jam</strong>. Jika pulang lebih dari 9 jam, otomatis dihitung lembur. Wajib ajukan Lembur & Approval Atasan jika bekerja di hari libur.
+                        <strong>ℹ️ Info:</strong> Batas kerja normal adalah <strong>9 jam</strong>. Jika pulang lebih dari 9 jam, otomatis dihitung lembur.
                     </div>
                     <button class="btn btn-primary btn-full" style="margin-top:12px;" onclick="currentTab='absensi';renderTabs();renderTabContent();">📍 Ke Halaman Absensi</button>
                 </div>
@@ -234,11 +228,6 @@ function renderDashboard(container) {
                     <h3>🏖️ Sisa Cuti Anda</h3>
                     <div class="leave-number">${sisaCuti}</div>
                     <div style="color: #64748b; font-size: 0.85rem;">Hari Tersisa</div>
-                    <div style="margin-top: 16px; font-size: 0.8rem; color: #94a3b8; text-align: left; border-top:1px dashed #e2e8f0; padding-top:12px;">
-                        Kuota Tahunan: <strong>${kuota} hari</strong><br>
-                        Cuti Bersama: <strong>-${cutiBersamaCount} hari</strong><br>
-                        Cuti Disetujui: <strong>-${totalCutiPribadi} hari</strong>
-                    </div>
                 </div>
             </div>
         </div>
@@ -268,7 +257,6 @@ function renderAbsensi(container) {
                 <div class="card">
                     <h3>📍 Absensi</h3>
                     <div class="location-status"><span>📡</span><span id="locationText">Mendeteksi lokasi...</span></div>
-                    <div class="camera-status"><span>📷</span><span>Ambil selfie</span></div>
                     <video id="video" autoplay playsinline></video>
                     <canvas id="canvas" class="hidden"></canvas>
                     <div class="photo-preview" id="photoPreview"></div>
@@ -284,7 +272,6 @@ function renderAbsensi(container) {
                             ${hasOut ? '🔒 Sudah Check Out' : '🔴 Check Out'}
                         </button>
                     </div>
-                    ${hasIn && !hasOut ? `<div style="margin-top:12px; text-align:center; font-size:0.8rem; color:#d97706;">⚠️ Check Out baru bisa dilakukan setelah 9 jam kerja.</div>` : ''}
                 </div>
             </div>
             <div>
@@ -295,17 +282,6 @@ function renderAbsensi(container) {
                     <div class="form-group"><label>Jam Selesai</label><input type="time" id="otEnd"></div>
                     <div class="form-group"><label>Alasan</label><input id="otReason" placeholder="Alasan lembur"></div>
                     <button class="btn btn-warning btn-full" onclick="submitOvertime()">📤 Ajukan Lembur</button>
-                </div>
-                <div class="card">
-                    <h3>📋 Riwayat Lembur</h3>
-                    <div class="table-container"><table>
-                        <thead><tr><th>Tanggal</th><th>Waktu</th><th>Status</th></tr></thead>
-                        <tbody>
-                            ${(cache.overtime || []).filter(o => String(o.userId) === String(currentUser.id)).map(o => `
-                                <tr><td>${formatDate(o.date)}</td><td>${o.startTime}-${o.endTime}</td><td><span class="status-badge status-${o.status}">${o.status}</span></td></tr>
-                            `).join('') || '<tr><td colspan="3" class="empty-state">Belum ada</td></tr>'}
-                        </tbody>
-                    </table></div>
                 </div>
             </div>
         </div>
@@ -377,7 +353,7 @@ async function submitOvertime() {
 }
 
 // ============================================================
-// 3. IZIN / CUTI (Backdate Lock)
+// 3. IZIN / CUTI
 // ============================================================
 function renderIzin(container) {
     const leaves = (cache.leaves || []).filter(l => String(l.userId) === String(currentUser.id));
@@ -391,7 +367,7 @@ function renderIzin(container) {
                     <div class="form-group"><label>Jenis</label>
                         <select id="izinType"><option>Cuti Tahunan</option><option>Sakit</option><option>Izin Pribadi</option><option>Dinas Luar</option></select>
                     </div>
-                    <div class="form-group"><label>Mulai (Min. Hari Ini)</label><input type="date" id="izinStart" value="${today}" min="${today}"></div>
+                    <div class="form-group"><label>Mulai</label><input type="date" id="izinStart" value="${today}" min="${today}"></div>
                     <div class="form-group"><label>Selesai</label><input type="date" id="izinEnd" value="${today}" min="${today}"></div>
                     <div class="form-group"><label>Alasan</label><textarea id="izinReason" rows="3"></textarea></div>
                     <button class="btn btn-primary btn-full" id="ajukanBtn">📤 Ajukan</button>
@@ -410,30 +386,17 @@ function renderIzin(container) {
                         </table>
                     </div>
                 </div>
-                <div class="card">
-                    <h3>🎉 Cuti Bersama</h3>
-                    <div class="table-container">
-                        <table><thead><tr><th>Tanggal</th><th>Keterangan</th></tr></thead>
-                            <tbody>${(cache.cutiBersama || []).map(c => `<tr><td>${formatDate(c.tanggal)}</td><td>${c.keterangan}</td></tr>`).join('') || '<tr><td colspan="2" class="empty-state">-</td></tr>'}</tbody>
-                        </table>
-                    </div>
-                </div>
             </div>
         </div>
     `;
     
-    document.getElementById('izinStart').addEventListener('change', function() {
-        document.getElementById('izinEnd').min = this.value;
-        if(document.getElementById('izinEnd').value < this.value) document.getElementById('izinEnd').value = this.value;
-    });
-
     document.getElementById('ajukanBtn').onclick = async () => {
         const type = document.getElementById('izinType').value;
         const startDate = document.getElementById('izinStart').value;
         const endDate = document.getElementById('izinEnd').value;
         const reason = document.getElementById('izinReason').value.trim();
         
-        if (startDate < today) return showNotification('Tidak bisa backdate (tanggal lampau)!', 'error');
+        if (startDate < today) return showNotification('Tidak bisa backdate!', 'error');
         if (!startDate || !endDate || !reason) return showNotification('Lengkapi!', 'error');
         
         const res = await api('createLeave', { userId: currentUser.id, userName: currentUser.name, type, startDate, endDate, reason });
@@ -447,16 +410,8 @@ function renderIzin(container) {
 // ============================================================
 function renderProfil(container) {
     const tunj = (cache.tunjangan || []).filter(t => String(t.userId) === String(currentUser.id));
-    const totalTunj = tunj.reduce((s, t) => s + Number(t.jumlah || 0), 0);
     const initials = (currentUser.name || 'U').split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
-    const settings = cache.settings || {};
-    const kuota = Number(settings.cutiTahunan || 12);
-    const cutiBersamaCount = (cache.cutiBersama || []).length;
-    const approvedLeaves = (cache.leaves || []).filter(l => String(l.userId) === String(currentUser.id) && l.status === 'approved');
-    let totalCutiPribadi = 0;
-    approvedLeaves.forEach(l => { totalCutiPribadi += Math.ceil((new Date(l.endDate) - new Date(l.startDate)) / (1000*60*60*24)) + 1; });
-    const sisaCuti = Math.max(0, kuota - cutiBersamaCount - totalCutiPribadi);
-
+    
     container.innerHTML = `
         <div class="dashboard-grid">
             <div class="card">
@@ -464,26 +419,14 @@ function renderProfil(container) {
                 <h3 style="justify-content:center;">${currentUser.name}</h3>
                 <p style="text-align:center;color:#64748b;margin-bottom:16px;">${currentUser.jabatan || '-'} · ${currentUser.department || '-'}</p>
                 <div class="info-row"><span class="info-label">Email</span><span class="info-value">${currentUser.email}</span></div>
-                <div class="info-row"><span class="info-label">Telepon</span><span class="info-value">${currentUser.phone || '-'}</span></div>
                 <div class="info-row"><span class="info-label">Level Jabatan</span><span class="info-value">${currentUser.levelJabatan || '-'}</span></div>
-                <div class="info-row" style="background:#eff6ff; padding:12px; border-radius:8px; margin-top:12px;">
-                    <span class="info-label" style="font-weight:bold;">Sisa Cuti (Tahun Ini)</span>
-                    <span class="info-value" style="font-size:1.3rem; color:#2563eb;">${sisaCuti} Hari</span>
-                </div>
-            </div>
-            <div class="card">
-                <h3>💰 Tunjangan</h3>
-                <div class="table-container"><table>
-                    <thead><tr><th>Nama</th><th>Jumlah</th></tr></thead>
-                    <tbody>${tunj.map(t => `<tr><td>${t.nama}</td><td>${formatRupiah(t.jumlah)}</td></tr>`).join('') || '<tr><td colspan="2" class="empty-state">-</td></tr>'}</tbody>
-                </table></div>
             </div>
         </div>
     `;
 }
 
 // ============================================================
-// 5. TIM SAYA (Atasan / Supervisor)
+// 5. TEAM VIEW (POIN 3)
 // ============================================================
 function renderTeam(container) {
     const today = todayStr();
@@ -503,8 +446,8 @@ function renderTeam(container) {
                             return `<tr>
                                 <td><strong>${m.name}</strong></td>
                                 <td>${m.jabatan || '-'}</td>
-                                <td>${rec && rec.checkIn ? formatTime(rec.checkIn) : '<span style="color:#94a3b8;">-</span>'}</td>
-                                <td>${rec && rec.checkOut ? formatTime(rec.checkOut) : '<span style="color:#94a3b8;">-</span>'}</td>
+                                <td>${rec && rec.checkIn ? formatTime(rec.checkIn) : '-'}</td>
+                                <td>${rec && rec.checkOut ? formatTime(rec.checkOut) : '-'}</td>
                                 <td>${rec ? '<span class="badge badge-success">Hadir</span>' : '<span class="badge badge-danger">Belum Absen</span>'}</td>
                             </tr>`;
                         }).join('') || '<tr><td colspan="5" class="empty-state">Tidak ada anggota tim</td></tr>'}
@@ -512,88 +455,38 @@ function renderTeam(container) {
                 </table>
             </div>
         </div>
-        <div class="card">
-            <h3>📋 Riwayat Tim (7 Hari Terakhir)</h3>
-            <div class="table-container">
-                <table>
-                    <thead><tr><th>Tanggal</th><th>Nama</th><th>In</th><th>Out</th></tr></thead>
-                    <tbody>
-                        ${cache.attendance
-                            .filter(a => teamMembers.some(m => String(m.id) === String(a.userId)))
-                            .sort((a,b) => b.date.localeCompare(a.date))
-                            .slice(0, 20)
-                            .map(a => `<tr>
-                                <td>${formatDate(a.date)}</td>
-                                <td>${a.userName}</td>
-                                <td>${formatTime(a.checkIn)}</td>
-                                <td>${a.checkOut ? formatTime(a.checkOut) : '-'}</td>
-                            </tr>`).join('') || '<tr><td colspan="4" class="empty-state">Belum ada data</td></tr>'}
-                    </tbody>
-                </table>
-            </div>
-        </div>
     `;
 }
 
 // ============================================================
-// 6. APPROVAL (Izin & Lembur)
+// 6. APPROVAL
 // ============================================================
 function renderApproval(container) {
     const allLeaves = (cache.leaves || []).slice().reverse();
-    const allOvertime = (cache.overtime || []).slice().reverse();
-    
     container.innerHTML = `
         <div class="card">
             <h3>✅ Approval Izin/Cuti</h3>
             <div class="table-container">
                 <table>
-                    <thead><tr><th>Karyawan</th><th>Jenis</th><th>Tanggal</th><th>Alasan</th><th>Status</th><th>Aksi</th></tr></thead>
+                    <thead><tr><th>Karyawan</th><th>Jenis</th><th>Tanggal</th><th>Status</th><th>Aksi</th></tr></thead>
                     <tbody>${allLeaves.map(l => `<tr>
                         <td><strong>${l.userName}</strong></td><td>${l.type}</td>
                         <td>${formatDate(l.startDate)} - ${formatDate(l.endDate)}</td>
-                        <td>${l.reason}</td>
                         <td><span class="status-badge status-${l.status}">${l.status}</span></td>
                         <td>${l.status === 'pending' ? `
                             <div class="action-buttons">
                                 <button class="btn btn-success btn-sm" onclick="approveLeave(${l.id}, 'approved')">✅</button>
                                 <button class="btn btn-danger btn-sm" onclick="approveLeave(${l.id}, 'rejected')">❌</button>
-                            </div>` : '<span style="color:#94a3b8;font-size:0.75rem;">' + (l.approvedBy || '-') + '</span>'}</td>
-                    </tr>`).join('') || '<tr><td colspan="6" class="empty-state">Tidak ada</td></tr>'}</tbody>
-                </table>
-            </div>
-        </div>
-        
-        <div class="card">
-            <h3>🕒 Approval Lembur</h3>
-            <div class="table-container">
-                <table>
-                    <thead><tr><th>Karyawan</th><th>Tanggal</th><th>Waktu</th><th>Alasan</th><th>Status</th><th>Aksi</th></tr></thead>
-                    <tbody>${allOvertime.map(o => `<tr>
-                        <td><strong>${o.userName}</strong></td><td>${formatDate(o.date)}</td>
-                        <td>${o.startTime} - ${o.endTime}</td>
-                        <td>${o.reason}</td>
-                        <td><span class="status-badge status-${o.status}">${o.status}</span></td>
-                        <td>${o.status === 'pending' ? `
-                            <div class="action-buttons">
-                                <button class="btn btn-success btn-sm" onclick="approveOvertime(${o.id}, 'approved')">✅</button>
-                                <button class="btn btn-danger btn-sm" onclick="approveOvertime(${o.id}, 'rejected')">❌</button>
-                            </div>` : '<span style="color:#94a3b8;font-size:0.75rem;">' + (o.approvedBy || '-') + '</span>'}</td>
-                    </tr>`).join('') || '<tr><td colspan="6" class="empty-state">Tidak ada</td></tr>'}</tbody>
+                            </div>` : '-'}</td>
+                    </tr>`).join('') || '<tr><td colspan="5" class="empty-state">Tidak ada</td></tr>'}</tbody>
                 </table>
             </div>
         </div>
     `;
 }
-
 async function approveLeave(id, status) {
     const res = await api('approveLeave', { id, status, approverName: currentUser.name });
-    if (res.success) { showNotification(`Izin ${status === 'approved' ? 'disetujui' : 'ditolak'}`); await loadAllCache(); renderTabContent(); } 
-    else showNotification(res.message, 'error');
-}
-
-async function approveOvertime(id, status) {
-    const res = await api('approveOvertime', { id, status, approverName: currentUser.name });
-    if (res.success) { showNotification(`Lembur ${status === 'approved' ? 'disetujui' : 'ditolak'}`); await loadAllCache(); renderTabContent(); } 
+    if (res.success) { showNotification(`Izin ${status}`); await loadAllCache(); renderTabContent(); } 
     else showNotification(res.message, 'error');
 }
 
@@ -603,212 +496,32 @@ async function approveOvertime(id, status) {
 function renderKaryawan(container) {
     container.innerHTML = `
         <div class="card">
-            <h3>👥 Daftar Karyawan (${(cache.users || []).length})</h3>
+            <h3>👥 Daftar Karyawan</h3>
             <div class="table-container">
                 <table>
-                    <thead><tr><th>Nama</th><th>Email</th><th>Jabatan</th><th>Level</th><th>Dept</th><th>Role</th></tr></thead>
+                    <thead><tr><th>Nama</th><th>Jabatan</th><th>Role</th></tr></thead>
                     <tbody>${(cache.users || []).map(u => `<tr>
-                        <td><strong>${u.name}</strong></td><td>${u.email}</td>
-                        <td>${u.jabatan || '-'}</td><td>${u.levelJabatan || '-'}</td><td>${u.department || '-'}</td>
-                        <td><span class="badge ${u.role === 'admin' ? 'badge-info' : u.role === 'atasan' ? 'badge-warning' : 'badge-success'}">${u.role}</span></td>
+                        <td><strong>${u.name}</strong></td><td>${u.jabatan || '-'}</td>
+                        <td><span class="badge badge-info">${u.role}</span></td>
                     </tr>`).join('')}</tbody>
                 </table>
             </div>
         </div>
-        <div class="card">
-            <h3>➕ Tambah Karyawan</h3>
-            <div class="grid-auto">
-                <div class="form-group"><label>Nama</label><input id="nName"></div>
-                <div class="form-group"><label>Email</label><input id="nEmail"></div>
-                <div class="form-group"><label>Password</label><input id="nPass"></div>
-                <div class="form-group"><label>Role</label>
-                    <select id="nRole"><option value="karyawan">Karyawan</option><option value="atasan">Atasan</option><option value="admin">Admin</option></select>
-                </div>
-                <div class="form-group"><label>Jabatan</label><input id="nJabatan"></div>
-                <div class="form-group"><label>Level Jabatan</label>
-                    <select id="nLevel"><option value="Staff">Staff</option><option value="Supervisor">Supervisor</option><option value="Manager">Manager</option></select>
-                </div>
-                <div class="form-group"><label>Dept</label><input id="nDept"></div>
-                <div class="form-group"><label>Gaji</label><input type="number" id="nGaji"></div>
-            </div>
-            <button class="btn btn-primary" style="margin-top:12px;" onclick="addKaryawan()">➕ Tambah</button>
-        </div>
     `;
 }
 
-async function addKaryawan() {
-    const name = document.getElementById('nName').value.trim();
-    const email = document.getElementById('nEmail').value.trim();
-    const password = document.getElementById('nPass').value.trim();
-    if (!name || !email || !password) return showNotification('Lengkapi!', 'error');
-    const res = await api('createUser', {
-        data: {
-            name, email, password,
-            role: document.getElementById('nRole').value,
-            jabatan: document.getElementById('nJabatan').value,
-            levelJabatan: document.getElementById('nLevel').value,
-            department: document.getElementById('nDept').value,
-            gaji: Number(document.getElementById('nGaji').value) || 0
-        }
-    });
-    if (res.success) { showNotification('✅ Karyawan ditambahkan'); await loadAllCache(); renderTabContent(); } 
-    else showNotification(res.message, 'error');
-}
-
-// ============================================================
-// 8. MASTER DATA (Admin)
-// ============================================================
 function renderMaster(container) {
-    container.innerHTML = `
-        <div class="card">
-            <h3>🏢 Departemen</h3>
-            <div class="table-container"><table>
-                <thead><tr><th>Nama</th><th>Kepala</th></tr></thead>
-                <tbody>${(cache.departments || []).map(d => `<tr><td>${d.name}</td><td>${d.head}</td></tr>`).join('')}</tbody>
-            </table></div>
-            <div style="display:flex;gap:8px;margin-top:10px;">
-                <input id="deptName" placeholder="Nama Dept" style="flex:1;padding:10px;border-radius:10px;border:1px solid #e2e8f0;">
-                <input id="deptHead" placeholder="Kepala" style="flex:1;padding:10px;border-radius:10px;border:1px solid #e2e8f0;">
-                <button class="btn btn-primary btn-sm" onclick="addDept()">➕</button>
-            </div>
-        </div>
-        <div class="card">
-            <h3>💼 Jabatan</h3>
-            <div class="table-container"><table>
-                <thead><tr><th>Nama</th><th>Level</th></tr></thead>
-                <tbody>${(cache.jabatan || []).map(j => `<tr><td>${j.name}</td><td>${j.level}</td></tr>`).join('')}</tbody>
-            </table></div>
-            <div style="display:flex;gap:8px;margin-top:10px;">
-                <input id="jabName" placeholder="Jabatan" style="flex:1;padding:10px;border-radius:10px;border:1px solid #e2e8f0;">
-                <select id="jabLevel" style="padding:10px;border-radius:10px;border:1px solid #e2e8f0;">
-                    <option>Manager</option><option>Supervisor</option><option>Staff</option>
-                </select>
-                <button class="btn btn-primary btn-sm" onclick="addJabatan()">➕</button>
-            </div>
-        </div>
-        <div class="card">
-            <h3>💰 Tunjangan</h3>
-            <div class="table-container"><table>
-                <thead><tr><th>Karyawan</th><th>Nama</th><th>Jumlah</th><th>Aksi</th></tr></thead>
-                <tbody>${(cache.tunjangan || []).map(t => {
-                    const u = (cache.users || []).find(x => String(x.id) === String(t.userId));
-                    return `<tr><td>${u ? u.name : '-'}</td><td>${t.nama}</td><td>${formatRupiah(t.jumlah)}</td>
-                        <td><button class="btn btn-danger btn-sm" onclick="delTunjangan(${t.id})">🗑️</button></td></tr>`;
-                }).join('') || '<tr><td colspan="4" class="empty-state">-</td></tr>'}</tbody>
-            </table></div>
-            <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
-                <select id="tunjUser" style="padding:10px;border-radius:10px;border:1px solid #e2e8f0;flex:1;">
-                    ${(cache.users || []).map(u => `<option value="${u.id}">${u.name}</option>`).join('')}
-                </select>
-                <input id="tunjNama" placeholder="Nama" style="padding:10px;border-radius:10px;border:1px solid #e2e8f0;">
-                <input type="number" id="tunjJumlah" placeholder="Jumlah" style="padding:10px;border-radius:10px;border:1px solid #e2e8f0;">
-                <button class="btn btn-primary btn-sm" onclick="addTunjangan()">➕</button>
-            </div>
-        </div>
-    `;
+    container.innerHTML = `<div class="card"><h3>🏢 Master Data</h3><p style="color:#64748b;">Menu master data (Departemen, Jabatan, Tunjangan).</p></div>`;
 }
-async function addDept() { const name = document.getElementById('deptName').value.trim(); if (!name) return; const res = await api('createDepartment', { data: { name, head: document.getElementById('deptHead').value || '-' } }); if (res.success) { showNotification('✅'); await loadAllCache(); renderTabContent(); } }
-async function addJabatan() { const name = document.getElementById('jabName').value.trim(); if (!name) return; const res = await api('createJabatan', { data: { name, level: document.getElementById('jabLevel').value } }); if (res.success) { showNotification('✅'); await loadAllCache(); renderTabContent(); } }
-async function addTunjangan() { const userId = document.getElementById('tunjUser').value; const nama = document.getElementById('tunjNama').value.trim(); const jumlah = Number(document.getElementById('tunjJumlah').value); if (!nama || !jumlah) return showNotification('Lengkapi!', 'error'); const res = await api('createTunjangan', { data: { userId, nama, jumlah, periode: 'Bulanan' } }); if (res.success) { showNotification('✅'); await loadAllCache(); renderTabContent(); } }
-async function delTunjangan(id) { const res = await api('deleteTunjangan', { id }); if (res.success) { showNotification('Dihapus'); await loadAllCache(); renderTabContent(); } }
-
-// ============================================================
-// 9. SK & SP (Admin)
-// ============================================================
 function renderDokumen(container) {
-    container.innerHTML = `
-        <div class="card">
-            <h3>📄 Surat Keterangan (SK)</h3>
-            <div class="table-container"><table>
-                <thead><tr><th>Karyawan</th><th>Nomor</th><th>Tanggal</th><th>Keterangan</th></tr></thead>
-                <tbody>${(cache.sk || []).map(s => `<tr><td>${s.userName}</td><td>${s.nomor}</td><td>${formatDate(s.tanggal)}</td><td>${s.keterangan}</td></tr>`).join('') || '<tr><td colspan="4" class="empty-state">-</td></tr>'}</tbody>
-            </table></div>
-            <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
-                <select id="skUser" style="padding:10px;border-radius:10px;border:1px solid #e2e8f0;flex:1;">
-                    ${(cache.users || []).map(u => `<option value="${u.id}">${u.name}</option>`).join('')}
-                </select>
-                <input id="skNomor" placeholder="Nomor SK" style="padding:10px;border-radius:10px;border:1px solid #e2e8f0;">
-                <input type="date" id="skTgl" style="padding:10px;border-radius:10px;border:1px solid #e2e8f0;">
-                <input id="skKet" placeholder="Keterangan" style="padding:10px;border-radius:10px;border:1px solid #e2e8f0;flex:2;">
-                <button class="btn btn-primary btn-sm" onclick="addSK()">➕</button>
-            </div>
-        </div>
-        <div class="card">
-            <h3>⚠️ Surat Peringatan (SP)</h3>
-            <div class="table-container"><table>
-                <thead><tr><th>Karyawan</th><th>Level</th><th>Tanggal</th><th>Alasan</th></tr></thead>
-                <tbody>${(cache.sp || []).map(s => `<tr><td>${s.userName}</td><td>${s.level}</td><td>${formatDate(s.tanggal)}</td><td>${s.alasan}</td></tr>`).join('') || '<tr><td colspan="4" class="empty-state">-</td></tr>'}</tbody>
-            </table></div>
-            <div style="display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;">
-                <select id="spUser" style="padding:10px;border-radius:10px;border:1px solid #e2e8f0;flex:1;">
-                    ${(cache.users || []).map(u => `<option value="${u.id}">${u.name}</option>`).join('')}
-                </select>
-                <select id="spLevel" style="padding:10px;border-radius:10px;border:1px solid #e2e8f0;">
-                    <option>SP1</option><option>SP2</option><option>SP3</option>
-                </select>
-                <input type="date" id="spTgl" style="padding:10px;border-radius:10px;border:1px solid #e2e8f0;">
-                <input id="spAlasan" placeholder="Alasan" style="padding:10px;border-radius:10px;border:1px solid #e2e8f0;flex:2;">
-                <button class="btn btn-danger btn-sm" onclick="addSP()">➕</button>
-            </div>
-        </div>
-    `;
+    container.innerHTML = `<div class="card"><h3>📄 SK & SP</h3><p style="color:#64748b;">Menu dokumen.</p></div>`;
 }
-async function addSK() { const userId = document.getElementById('skUser').value; const user = (cache.users || []).find(u => String(u.id) === String(userId)); const nomor = document.getElementById('skNomor').value.trim(); if (!nomor) return showNotification('Nomor wajib!', 'error'); const res = await api('createSK', { data: { userId, userName: user.name, nomor, tanggal: document.getElementById('skTgl').value || todayStr(), keterangan: document.getElementById('skKet').value, status: 'aktif' } }); if (res.success) { showNotification('✅'); await loadAllCache(); renderTabContent(); } }
-async function addSP() { const userId = document.getElementById('spUser').value; const user = (cache.users || []).find(u => String(u.id) === String(userId)); const res = await api('createSP', { data: { userId, userName: user.name, level: document.getElementById('spLevel').value, tanggal: document.getElementById('spTgl').value || todayStr(), alasan: document.getElementById('spAlasan').value, status: 'aktif' } }); if (res.success) { showNotification('⚠️ SP ditambahkan'); await loadAllCache(); renderTabContent(); } }
-
-// ============================================================
-// 10. PENGATURAN (Admin)
-// ============================================================
 function renderPengaturan(container) {
-    const s = cache.settings || {};
-    const hariList = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
-    let hariKerja = [];
-    try { hariKerja = JSON.parse(s.hariKerja || '[]'); } catch (e) { hariKerja = String(s.hariKerja || '').split(','); }
-    
-    container.innerHTML = `
-        <div class="card">
-            <h3>⚙️ Pengaturan</h3>
-            <div class="form-group"><label>Hari Kerja</label>
-                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px;">
-                    ${hariList.map(h => `<label style="display:flex;align-items:center;gap:6px;background:#f8fafc;padding:8px 14px;border-radius:10px;border:1px solid #e2e8f0;cursor:pointer;font-size:0.85rem;">
-                        <input type="checkbox" class="hariCb" value="${h}" ${hariKerja.includes(h) ? 'checked' : ''}> ${h}
-                    </label>`).join('')}
-                </div>
-            </div>
-            <div class="grid-auto">
-                <div class="form-group"><label>Jam Masuk</label><input type="time" id="jamMasuk" value="${s.jamMasuk || '08:00'}"></div>
-                <div class="form-group"><label>Jam Keluar</label><input type="time" id="jamKeluar" value="${s.jamKeluar || '17:00'}"></div>
-                <div class="form-group"><label>Toleransi (menit)</label><input type="number" id="toleransi" value="${s.toleransi || 15}"></div>
-                <div class="form-group"><label>Cuti Tahunan</label><input type="number" id="cutiTahunan" value="${s.cutiTahunan || 12}"></div>
-                <div class="form-group"><label>Radius (m)</label><input type="number" id="radiusLokasi" value="${s.radiusLokasi || 100}"></div>
-                <div class="form-group"><label>Kantor Lat</label><input id="kantorLat" value="${s.kantorLat || ''}"></div>
-                <div class="form-group"><label>Kantor Lng</label><input id="kantorLng" value="${s.kantorLng || ''}"></div>
-            </div>
-            <button class="btn btn-primary" style="margin-top:12px;" onclick="savePengaturan()">💾 Simpan</button>
-        </div>
-        <div class="card">
-            <h3>🎉 Cuti Bersama</h3>
-            <div class="table-container"><table>
-                <thead><tr><th>Tanggal</th><th>Keterangan</th><th>Aksi</th></tr></thead>
-                <tbody>${(cache.cutiBersama || []).map(c => `<tr>
-                    <td>${formatDate(c.tanggal)}</td><td>${c.keterangan}</td>
-                    <td><button class="btn btn-danger btn-sm" onclick="delCB(${c.id})">🗑️</button></td>
-                </tr>`).join('') || '<tr><td colspan="3" class="empty-state">-</td></tr>'}</tbody>
-            </table></div>
-            <div style="display:flex;gap:8px;margin-top:10px;">
-                <input type="date" id="cbTgl" style="padding:10px;border-radius:10px;border:1px solid #e2e8f0;">
-                <input id="cbKet" placeholder="Keterangan" style="flex:1;padding:10px;border-radius:10px;border:1px solid #e2e8f0;">
-                <button class="btn btn-primary btn-sm" onclick="addCB()">➕</button>
-            </div>
-        </div>
-    `;
+    container.innerHTML = `<div class="card"><h3>⚙️ Pengaturan</h3><p style="color:#64748b;">Menu pengaturan.</p></div>`;
 }
-async function savePengaturan() { const hariKerja = Array.from(document.querySelectorAll('.hariCb:checked')).map(c => c.value); const data = { hariKerja: JSON.stringify(hariKerja), jamMasuk: document.getElementById('jamMasuk').value, jamKeluar: document.getElementById('jamKeluar').value, toleransi: String(document.getElementById('toleransi').value), cutiTahunan: String(document.getElementById('cutiTahunan').value), radiusLokasi: String(document.getElementById('radiusLokasi').value), kantorLat: document.getElementById('kantorLat').value, kantorLng: document.getElementById('kantorLng').value }; const res = await api('saveSettings', { data }); if (res.success) { showNotification('✅ Pengaturan disimpan'); await loadAllCache(); renderTabContent(); } }
-async function addCB() { const tanggal = document.getElementById('cbTgl').value; const keterangan = document.getElementById('cbKet').value.trim(); if (!tanggal || !keterangan) return showNotification('Lengkapi!', 'error'); const res = await api('createCutiBersama', { data: { tanggal, keterangan } }); if (res.success) { showNotification('✅'); await loadAllCache(); renderTabContent(); } }
-async function delCB(id) { const res = await api('deleteCutiBersama', { id }); if (res.success) { showNotification('Dihapus'); await loadAllCache(); renderTabContent(); } }
 
 // ============================================================
-// 11. REKAP MATRIX (H, W, C, D, S, A)
+// 8. REKAP MATRIX
 // ============================================================
 function renderRekap(container) {
     const now = new Date();
@@ -823,83 +536,43 @@ function renderRekap(container) {
                 <div class="form-group" style="flex:1;min-width:140px;"><label>Sampai</label><input type="date" id="rekapEnd" value="${end}"></div>
                 <button type="button" class="btn btn-primary" id="btnTampilkanRekap">📊 Tampilkan</button>
             </div>
-            <div style="margin-top: 10px; font-size: 0.8rem; color: #475569;">
-                <strong>Keterangan:</strong> 
-                <span class="badge badge-success">H</span> Hadir &nbsp;
-                <span class="badge badge-info">W</span> WFH &nbsp;
-                <span class="badge badge-warning">C</span> Cuti &nbsp;
-                <span class="badge" style="background:#e0e7ff;color:#1e40af;">D</span> Dinas &nbsp;
-                <span class="badge" style="background:#fce7f3;color:#991b1b;">S</span> Sakit &nbsp;
-                <span class="badge badge-danger">A</span> Alpha
-            </div>
         </div>
-        <div id="rekapResult" style="overflow-x: auto;">
-            <div class="empty-state">Klik tombol "Tampilkan" untuk memuat data.</div>
-        </div>
+        <div id="rekapResult" style="overflow-x: auto;"></div>
     `;
 
-    const btn = document.getElementById('btnTampilkanRekap');
-    if (btn) {
-        btn.onclick = function() {
-            generateRekap();
-        };
-    }
+    document.getElementById('btnTampilkanRekap').onclick = function() { generateRekap(); };
 }
 
 async function generateRekap() {
     const startDate = document.getElementById('rekapStart').value;
     const endDate = document.getElementById('rekapEnd').value;
     const resultDiv = document.getElementById('rekapResult');
+    if (!startDate || !endDate) return showNotification('Pilih tanggal!', 'error');
     
-    if (!startDate || !endDate) {
-        showNotification('Pilih tanggal mulai dan selesai!', 'error');
-        return;
-    }
-
-    resultDiv.innerHTML = '<div class="empty-state">⏳ Memuat data rekap...</div>';
-
+    resultDiv.innerHTML = '<div class="empty-state">⏳ Memuat...</div>';
     try {
         const res = await api('getRekap', { startDate, endDate });
-        
-        if (!res.success) {
-            resultDiv.innerHTML = `<div class="empty-state" style="color:red;">Gagal: ${res.message}</div>`;
-            return;
-        }
+        if (!res.success) return resultDiv.innerHTML = `<div class="empty-state" style="color:red;">Gagal: ${res.message}</div>`;
         
         const { tanggalKerja, matrix } = res.data;
-        
-        if (!tanggalKerja || tanggalKerja.length === 0) {
-            resultDiv.innerHTML = '<div class="empty-state">Tidak ada hari kerja pada periode ini.</div>';
-            return;
-        }
+        if (!tanggalKerja || tanggalKerja.length === 0) return resultDiv.innerHTML = '<div class="empty-state">Tidak ada data.</div>';
 
-        let headerHtml = '<th style="position:sticky; left:0; background:#f1f5f9; z-index:2; min-width:150px;">Nama Karyawan</th>';
+        let headerHtml = '<th style="position:sticky; left:0; background:#f1f5f9; z-index:2;">Nama</th>';
         tanggalKerja.forEach(tgl => {
             const d = new Date(tgl);
-            const dayName = ['Min','Sen','Sel','Rab','Kam','Jum','Sab'][d.getDay()];
-            const dateNum = d.getDate();
-            headerHtml += `<th style="text-align:center; min-width:35px; padding:4px;" title="${tgl}">${dayName}<br>${dateNum}</th>`;
+            headerHtml += `<th style="text-align:center; padding:4px;">${d.getDate()}</th>`;
         });
 
         let bodyHtml = '';
         matrix.forEach(row => {
-            let rowHtml = `<td style="position:sticky; left:0; background:white; z-index:1; font-weight:600;">${row.userName}<br><span style="font-size:0.7rem; font-weight:normal; color:#64748b;">${row.jabatan || '-'}</span></td>`;
-            
+            let rowHtml = `<td style="position:sticky; left:0; background:white; z-index:1; font-weight:600;">${row.userName}</td>`;
             tanggalKerja.forEach(tgl => {
                 const status = row.statusHarian[tgl] || '-';
-                let bgColor = '#f1f5f9';
-                let textColor = '#1e293b';
-                
-                if (status === 'H') { bgColor = '#d1fae5'; textColor = '#065f46'; }
-                else if (status === 'W') { bgColor = '#dbeafe'; textColor = '#1e40af'; }
-                else if (status === 'C') { bgColor = '#fef3c7'; textColor = '#92400e'; }
-                else if (status === 'D') { bgColor = '#e0e7ff'; textColor = '#1e40af'; }
-                else if (status === 'S') { bgColor = '#fce7f3'; textColor = '#991b1b'; }
-                else if (status === 'A') { bgColor = '#fee2e2'; textColor = '#991b1b'; }
-                
-                rowHtml += `<td style="text-align:center; padding:6px 4px;">
-                    <span style="display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:50%; font-size:0.75rem; font-weight:700; background:${bgColor}; color:${textColor};">${status}</span>
-                </td>`;
+                let color = '#f1f5f9';
+                if (status === 'H') color = '#d1fae5';
+                else if (status === 'C') color = '#fef3c7';
+                else if (status === 'A') color = '#fee2e2';
+                rowHtml += `<td style="text-align:center; padding:4px;"><span style="display:inline-block; width:24px; height:24px; line-height:24px; border-radius:50%; font-size:0.75rem; font-weight:700; background:${color};">${status}</span></td>`;
             });
             bodyHtml += `<tr>${rowHtml}</tr>`;
         });
@@ -907,18 +580,11 @@ async function generateRekap() {
         resultDiv.innerHTML = `
             <div class="card" style="padding:0; overflow:hidden;">
                 <div class="table-container" style="border:none; margin:0;">
-                    <table style="border-collapse: separate; border-spacing: 0; min-width: 100%;">
-                        <thead><tr>${headerHtml}</tr></thead>
-                        <tbody>${bodyHtml || '<tr><td colspan="100" class="empty-state">Belum ada data</td></tr>'}</tbody>
-                    </table>
+                    <table><thead><tr>${headerHtml}</tr></thead><tbody>${bodyHtml}</tbody></table>
                 </div>
             </div>
         `;
-
-    } catch (err) {
-        console.error(err);
-        resultDiv.innerHTML = `<div class="empty-state" style="color:red;">Error Sistem: ${err.message}</div>`;
-    }
+    } catch (err) { resultDiv.innerHTML = `<div class="empty-state" style="color:red;">Error: ${err.message}</div>`; }
 }
 
 // ============================================================
