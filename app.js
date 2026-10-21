@@ -9,7 +9,10 @@ let currentLocation = null;
 let currentPhotoData = null;
 let clockInterval = null;
 
-let cache = { users: [], attendance: [], leaves: [], overtime: [], settings: {}, departments: [], jabatan: [], tunjangan: [], sk: [], sp: [], cutiBersama: [] };
+let cache = { 
+    users: [], attendance: [], leaves: [], overtime: [], settings: {}, 
+    departments: [], jabatan: [], tunjangan: [], sk: [], sp: [], cutiBersama: [] 
+};
 
 // ============================================================
 // API CALL & UTILS
@@ -17,15 +20,36 @@ let cache = { users: [], attendance: [], leaves: [], overtime: [], settings: {},
 async function api(action, params = {}) {
     try {
         const body = { action, token: currentToken || CONFIG.API_TOKEN, ...params };
-        const res = await fetch(CONFIG.API_URL, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(body) });
+        const res = await fetch(CONFIG.API_URL, { 
+            method: 'POST', 
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' }, 
+            body: JSON.stringify(body),
+            redirect: 'follow'
+        });
         const json = await res.json();
         if (!json.success && json.message === 'Unauthorized') logout();
         return json;
-    } catch (err) { return { success: false, message: 'Koneksi error: ' + err.message }; }
+    } catch (err) { 
+        console.error('API Error:', err);
+        return { success: false, message: 'Koneksi error: ' + err.message }; 
+    }
 }
+
+async function testConnection() {
+    const el = document.getElementById('apiStatus'); 
+    if (!el) return;
+    el.textContent = '⏳ Menguji API...'; 
+    const res = await api('ping');
+    el.textContent = res.success ? '✅ API Terhubung' : '❌ Gagal: ' + res.message;
+    el.className = 'api-status ' + (res.success ? 'ok' : 'error');
+}
+
 function showNotification(msg, type = 'success') {
-    const n = document.createElement('div'); n.className = 'notification ' + type; n.textContent = msg;
-    document.body.appendChild(n); setTimeout(() => n.remove(), 3000);
+    const n = document.createElement('div'); 
+    n.className = 'notification ' + type; 
+    n.textContent = msg;
+    document.body.appendChild(n); 
+    setTimeout(() => n.remove(), 3000);
 }
 function formatDate(d) { return d ? new Date(d).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }) : '-'; }
 function formatTime(d) { return d ? new Date(d).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) : '-'; }
@@ -39,65 +63,95 @@ async function doLogin() {
     const email = document.getElementById('loginEmail').value.trim();
     const password = document.getElementById('loginPassword').value.trim();
     const role = document.getElementById('loginRole').value;
-    const btn = document.getElementById('loginBtn'); btn.disabled = true; btn.textContent = '⏳...';
+    const btn = document.getElementById('loginBtn'); 
+    btn.disabled = true; btn.textContent = '⏳ Login...';
+    
     const res = await api('login', { email, password, role });
     btn.disabled = false; btn.textContent = 'Masuk';
+    
     if (res.success) {
-        currentUser = res.data.user; currentToken = res.data.token;
-        localStorage.setItem('hris_user', JSON.stringify(currentUser)); localStorage.setItem('hris_token', currentToken);
-        await loadAllCache(); renderApp();
-    } else showNotification(res.message, 'error');
+        currentUser = res.data.user; 
+        currentToken = res.data.token;
+        localStorage.setItem('hris_user', JSON.stringify(currentUser)); 
+        localStorage.setItem('hris_token', currentToken);
+        showNotification('Selamat datang, ' + currentUser.name + '!');
+        await loadAllCache(); 
+        renderApp();
+    } else {
+        showNotification(res.message, 'error');
+    }
 }
+
 function logout() {
     currentUser = null; currentToken = null; clearInterval(clockInterval);
-    localStorage.removeItem('hris_user'); localStorage.removeItem('hris_token'); stopCamera(); renderApp();
+    localStorage.removeItem('hris_user'); localStorage.removeItem('hris_token'); 
+    stopCamera(); renderApp();
 }
+
 async function checkSession() {
     const sU = localStorage.getItem('hris_user'), sT = localStorage.getItem('hris_token');
-    if (sU && sT) { currentUser = JSON.parse(sU); currentToken = sT; await loadAllCache(); renderApp(); }
-    else { document.getElementById('loadingScreen').classList.add('hidden'); document.getElementById('loginScreen').classList.remove('hidden'); testConnection(); }
+    if (sU && sT) { 
+        currentUser = JSON.parse(sU); currentToken = sT; 
+        await loadAllCache(); renderApp(); 
+    } else { 
+        document.getElementById('loadingScreen').classList.add('hidden'); 
+        document.getElementById('loginScreen').classList.remove('hidden'); 
+        testConnection(); 
+    }
 }
+
 async function loadAllCache() {
     const [u, a, l, o, s, d, j, t, sk, sp, cb] = await Promise.all([
         api('getUsers'), api('getAttendance'), api('getLeaves'), api('getOvertime'), api('getSettings'),
         api('getDepartments'), api('getJabatan'), api('getTunjangan'), api('getSK'), api('getSP'), api('getCutiBersama')
     ]);
-    if(u.success) cache.users=u.data||[]; if(a.success) cache.attendance=a.data||[]; if(l.success) cache.leaves=l.data||[];
-    if(o.success) cache.overtime=o.data||[]; if(s.success) cache.settings=s.data||{}; if(d.success) cache.departments=d.data||[];
-    if(j.success) cache.jabatan=j.data||[]; if(t.success) cache.tunjangan=t.data||[]; if(sk.success) cache.sk=sk.data||[];
-    if(sp.success) cache.sp=sp.data||[]; if(cb.success) cache.cutiBersama=cb.data||[];
-}
-async function testConnection() {
-    const el = document.getElementById('apiStatus'); if (!el) return;
-    el.textContent = '⏳ Menguji API...'; const res = await api('ping');
-    el.textContent = res.success ? '✅ API Terhubung' : '❌ Gagal: ' + res.message;
-    el.className = 'api-status ' + (res.success ? 'ok' : 'error');
+    if(u.success) cache.users=u.data || []; 
+    if(a.success) cache.attendance=a.data || []; 
+    if(l.success) cache.leaves=l.data || [];
+    if(o.success) cache.overtime=o.data || []; 
+    if(s.success) cache.settings=s.data || {}; 
+    if(d.success) cache.departments=d.data || [];
+    if(j.success) cache.jabatan=j.data || []; 
+    if(t.success) cache.tunjangan=t.data || []; 
+    if(sk.success) cache.sk=sk.data || [];
+    if(sp.success) cache.sp=sp.data || []; 
+    if(cb.success) cache.cutiBersama=cb.data || [];
 }
 
 // ============================================================
-// RENDER & TABS
+// RENDER APP & TABS
 // ============================================================
 function renderApp() {
     document.getElementById('loadingScreen').classList.add('hidden');
     const l = document.getElementById('loginScreen'), d = document.getElementById('dashboardScreen'), ui = document.getElementById('userInfo');
+    
     if (currentUser) {
         l.classList.add('hidden'); d.classList.remove('hidden'); ui.classList.remove('hidden');
         document.getElementById('userNameDisplay').textContent = currentUser.name;
         document.getElementById('userRoleDisplay').textContent = currentUser.role.toUpperCase();
         renderTabs(); renderTabContent();
-    } else { l.classList.remove('hidden'); d.classList.add('hidden'); ui.classList.add('hidden'); }
+    } else { 
+        l.classList.remove('hidden'); d.classList.add('hidden'); ui.classList.add('hidden'); 
+    }
 }
 
 function getTabsForRole() {
     const t = [{ id: 'dashboard', label: '📊 Dashboard' }, { id: 'absensi', label: '📍 Absensi' }, { id: 'izin', label: '📝 Izin/Cuti' }, { id: 'profil', label: '👤 Profil' }];
-    const isSupervisor = currentUser.role === 'atasan' || currentUser.role === 'admin' || String(currentUser.levelJabatan).toLowerCase() === 'supervisor' || String(currentUser.levelJabatan).toLowerCase() === 'manager';
+    
+    // Cek apakah user adalah atasan/supervisor/manager/admin
+    const level = String(currentUser.levelJabatan || '').toLowerCase();
+    const isSupervisor = currentUser.role === 'atasan' || currentUser.role === 'admin' || level === 'supervisor' || level === 'manager';
     
     if (isSupervisor) {
-        t.push({ id: 'team', label: '👥 Tim Saya' }); // POIN 3: Menu Tim
+        t.push({ id: 'team', label: '👥 Tim Saya' });
         t.push({ id: 'approval', label: '✅ Approval' });
     }
     if (currentUser.role === 'admin') {
-        t.push({ id: 'karyawan', label: '👥 Karyawan' }, { id: 'master', label: '🏢 Master' }, { id: 'dokumen', label: '📄 SK & SP' }, { id: 'pengaturan', label: '⚙️ Pengaturan' }, { id: 'rekap', label: '📈 Rekap Matrix' });
+        t.push({ id: 'karyawan', label: '👥 Karyawan' });
+        t.push({ id: 'master', label: '🏢 Master' });
+        t.push({ id: 'dokumen', label: '📄 SK & SP' });
+        t.push({ id: 'pengaturan', label: '⚙️ Pengaturan' });
+        t.push({ id: 'rekap', label: '📈 Rekap Matrix' });
     }
     return t;
 }
@@ -112,24 +166,38 @@ function renderTabs() {
 function renderTabContent() {
     clearInterval(clockInterval);
     const c = document.getElementById('tabContent');
-    const map = { dashboard: renderDashboard, absensi: renderAbsensi, izin: renderIzin, profil: renderProfil, team: renderTeam, approval: renderApproval, karyawan: renderKaryawan, master: renderMaster, dokumen: renderDokumen, pengaturan: renderPengaturan, rekap: renderRekap };
+    const map = { 
+        dashboard: renderDashboard, absensi: renderAbsensi, izin: renderIzin, 
+        profil: renderProfil, team: renderTeam, approval: renderApproval, 
+        karyawan: renderKaryawan, master: renderMaster, dokumen: renderDokumen, 
+        pengaturan: renderPengaturan, rekap: renderRekap 
+    };
     const fn = map[currentTab] || renderDashboard;
-    try { fn(c); } catch (err) { c.innerHTML = `<div class="card" style="color:red;">Error: ${err.message}</div>`; }
+    try { 
+        fn(c); 
+    } catch (err) { 
+        console.error(err);
+        c.innerHTML = `<div class="card" style="color:red;">Error memuat halaman: ${err.message}</div>`; 
+    }
 }
 
 // ============================================================
-// DASHBOARD
+// 1. DASHBOARD (Jam Berjalan, Absen, Sisa Cuti)
 // ============================================================
 function renderDashboard(container) {
     const today = todayStr();
-    const todayAtt = cache.attendance.filter(a => a.date === today);
+    const todayAtt = (cache.attendance || []).filter(a => a.date === today);
     const myAtt = todayAtt.find(a => String(a.userId) === String(currentUser.id));
+    
     const settings = cache.settings || {};
     const kuota = Number(settings.cutiTahunan || 12);
     const cutiBersamaCount = (cache.cutiBersama || []).length;
     const approvedLeaves = (cache.leaves || []).filter(l => String(l.userId) === String(currentUser.id) && l.status === 'approved' && l.type !== 'Cuti Bersama');
     let totalCutiPribadi = 0;
-    approvedLeaves.forEach(l => { totalCutiPribadi += Math.ceil((new Date(l.endDate) - new Date(l.startDate)) / (1000 * 60 * 60 * 24)) + 1; });
+    approvedLeaves.forEach(l => {
+        const start = new Date(l.startDate), end = new Date(l.endDate);
+        totalCutiPribadi += Math.ceil((end - start) / (1000 * 60 * 60 * 24)) + 1;
+    });
     const sisaCuti = Math.max(0, kuota - cutiBersamaCount - totalCutiPribadi);
 
     container.innerHTML = `
@@ -175,6 +243,7 @@ function renderDashboard(container) {
             </div>
         </div>
     `;
+
     clockInterval = setInterval(() => {
         const now = new Date();
         const clock = document.getElementById('liveClock');
@@ -185,7 +254,7 @@ function renderDashboard(container) {
 }
 
 // ============================================================
-// ABSENSI (POIN 2: LOCK TOMBOL)
+// 2. ABSENSI & LEMBUR
 // ============================================================
 function renderAbsensi(container) {
     const today = todayStr();
@@ -203,12 +272,10 @@ function renderAbsensi(container) {
                     <video id="video" autoplay playsinline></video>
                     <canvas id="canvas" class="hidden"></canvas>
                     <div class="photo-preview" id="photoPreview"></div>
-                    
                     <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap;">
                         <button class="btn btn-secondary btn-sm" id="startCameraBtn" ${hasIn ? 'disabled' : ''}>🎥 Kamera</button>
                         <button class="btn btn-success btn-sm" id="captureBtn" disabled>📸 Ambil Foto</button>
                     </div>
-                    
                     <div style="display:flex;gap:10px;margin-top:10px;flex-wrap:wrap;">
                         <button class="btn btn-primary" id="checkInBtn" ${hasIn ? 'disabled' : ''} style="flex:1;">
                             ${hasIn ? '🔒 Sudah Check In' : '🟢 Check In'}
@@ -253,11 +320,29 @@ function renderAbsensi(container) {
 function detectLocation() {
     const t = document.getElementById('locationText'); if (!t) return;
     if (!navigator.geolocation) { t.textContent = '❌ Geolocation tidak didukung'; return; }
-    navigator.geolocation.getCurrentPosition(p => { currentLocation = { lat: p.coords.latitude, lng: p.coords.longitude }; t.textContent = `✅ ${p.coords.latitude.toFixed(4)}, ${p.coords.longitude.toFixed(4)}`; }, e => { t.textContent = '⚠️ ' + e.message; }, { enableHighAccuracy: true });
+    navigator.geolocation.getCurrentPosition(
+        p => { currentLocation = { lat: p.coords.latitude, lng: p.coords.longitude }; t.textContent = `✅ ${p.coords.latitude.toFixed(4)}, ${p.coords.longitude.toFixed(4)}`; }, 
+        e => { t.textContent = '⚠️ ' + e.message; }, 
+        { enableHighAccuracy: true }
+    );
 }
-function startCamera() { if (navigator.mediaDevices) { navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } }).then(s => { mediaStream = s; document.getElementById('video').srcObject = s; document.getElementById('captureBtn').disabled = false; }).catch(e => showNotification('Kamera error', 'error')); } }
+function startCamera() { 
+    if (navigator.mediaDevices) {
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } }).then(s => { 
+            mediaStream = s; document.getElementById('video').srcObject = s; document.getElementById('captureBtn').disabled = false; 
+        }).catch(e => showNotification('Kamera error: ' + e.message, 'error')); 
+    }
+}
 function stopCamera() { if (mediaStream) { mediaStream.getTracks().forEach(t => t.stop()); mediaStream = null; } }
-function capturePhoto() { const v = document.getElementById('video'), c = document.getElementById('canvas'); if (!v.srcObject) return showNotification('Nyalakan kamera dulu', 'error'); c.width = v.videoWidth || 320; c.height = v.videoHeight || 240; c.getContext('2d').drawImage(v, 0, 0, c.width, c.height); currentPhotoData = c.toDataURL('image/jpeg', 0.7); document.getElementById('photoPreview').innerHTML = `<img src="${currentPhotoData}">`; stopCamera(); showNotification('Foto diambil!'); }
+function capturePhoto() { 
+    const v = document.getElementById('video'), c = document.getElementById('canvas'); 
+    if (!v.srcObject) return showNotification('Nyalakan kamera dulu', 'error');
+    c.width = v.videoWidth || 320; c.height = v.videoHeight || 240; 
+    c.getContext('2d').drawImage(v, 0, 0, c.width, c.height); 
+    currentPhotoData = c.toDataURL('image/jpeg', 0.7); 
+    document.getElementById('photoPreview').innerHTML = `<img src="${currentPhotoData}">`; 
+    stopCamera(); showNotification('Foto diambil!'); 
+}
 
 async function handleCheck(type) {
     if (type === 'in' && !currentPhotoData) return showNotification('Ambil foto dulu!', 'error');
@@ -267,8 +352,13 @@ async function handleCheck(type) {
         userId: currentUser.id, userName: currentUser.name,
         locationLat: currentLocation?.lat, locationLng: currentLocation?.lng, photo: currentPhotoData
     });
-    if (res.success) { showNotification(`✅ ${type === 'in' ? 'Check In' : 'Check Out'} berhasil!`); currentPhotoData = null; await loadAllCache(); renderTabContent(); } 
-    else { showNotification(res.message, 'error'); btn.disabled = false; btn.textContent = type === 'in' ? '🟢 Check In' : '🔴 Check Out'; }
+    if (res.success) { 
+        showNotification(`✅ ${type === 'in' ? 'Check In' : 'Check Out'} berhasil!`); 
+        currentPhotoData = null; await loadAllCache(); renderTabContent(); 
+    } else { 
+        showNotification(res.message, 'error'); 
+        btn.disabled = false; btn.textContent = type === 'in' ? '🟢 Check In' : '🔴 Check Out'; 
+    }
 }
 
 async function submitOvertime() {
@@ -277,17 +367,17 @@ async function submitOvertime() {
     const endTime = document.getElementById('otEnd').value;
     const reason = document.getElementById('otReason').value.trim();
     
-    // Validasi Backdate
     const today = todayStr();
     if (date < today) return showNotification('Tanggal tidak boleh sebelum hari ini!', 'error');
     if (!date || !startTime || !endTime || !reason) return showNotification('Lengkapi data!', 'error');
     
     const res = await api('createOvertime', { data: { userId: currentUser.id, userName: currentUser.name, date, startTime, endTime, reason, status: 'pending' } });
-    if (res.success) { showNotification('✅ Lembur diajukan'); await loadAllCache(); renderTabContent(); } else showNotification(res.message, 'error');
+    if (res.success) { showNotification('✅ Lembur diajukan'); await loadAllCache(); renderTabContent(); } 
+    else showNotification(res.message, 'error');
 }
 
 // ============================================================
-// IZIN (POIN 1: BACKDATE LOCK)
+// 3. IZIN / CUTI (Backdate Lock)
 // ============================================================
 function renderIzin(container) {
     const leaves = (cache.leaves || []).filter(l => String(l.userId) === String(currentUser.id));
@@ -320,11 +410,18 @@ function renderIzin(container) {
                         </table>
                     </div>
                 </div>
+                <div class="card">
+                    <h3>🎉 Cuti Bersama</h3>
+                    <div class="table-container">
+                        <table><thead><tr><th>Tanggal</th><th>Keterangan</th></tr></thead>
+                            <tbody>${(cache.cutiBersama || []).map(c => `<tr><td>${formatDate(c.tanggal)}</td><td>${c.keterangan}</td></tr>`).join('') || '<tr><td colspan="2" class="empty-state">-</td></tr>'}</tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         </div>
     `;
     
-    // Otomatis set tanggal selesai jika mulai diubah
     document.getElementById('izinStart').addEventListener('change', function() {
         document.getElementById('izinEnd').min = this.value;
         if(document.getElementById('izinEnd').value < this.value) document.getElementById('izinEnd').value = this.value;
@@ -346,146 +443,7 @@ function renderIzin(container) {
 }
 
 // ============================================================
-// TEAM VIEW (POIN 3)
-// ============================================================
-function renderTeam(container) {
-    const today = todayStr();
-    const myDept = currentUser.department;
-    
-    // Filter anggota tim (department sama, selain diri sendiri)
-    const teamMembers = cache.users.filter(u => u.department === myDept && String(u.id) !== String(currentUser.id));
-    const teamAtt = cache.attendance.filter(a => a.date === today && teamMembers.some(m => String(m.id) === String(a.userId)));
-
-    container.innerHTML = `
-        <div class="card">
-            <h3>👥 Absensi Tim (${myDept}) Hari Ini</h3>
-            <div class="table-container">
-                <table>
-                    <thead><tr><th>Nama</th><th>Jabatan</th><th>Check In</th><th>Check Out</th><th>Status</th></tr></thead>
-                    <tbody>
-                        ${teamMembers.map(m => {
-                            const rec = teamAtt.find(a => String(a.userId) === String(m.id));
-                            return `<tr>
-                                <td><strong>${m.name}</strong></td>
-                                <td>${m.jabatan || '-'}</td>
-                                <td>${rec && rec.checkIn ? formatTime(rec.checkIn) : '<span style="color:#94a3b8;">-</span>'}</td>
-                                <td>${rec && rec.checkOut ? formatTime(rec.checkOut) : '<span style="color:#94a3b8;">-</span>'}</td>
-                                <td>${rec ? '<span class="badge badge-success">Hadir</span>' : '<span class="badge badge-danger">Belum Absen</span>'}</td>
-                            </tr>`;
-                        }).join('') || '<tr><td colspan="5" class="empty-state">Tidak ada anggota tim</td></tr>'}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-        
-        <div class="card">
-            <h3>📋 Riwayat Tim (7 Hari Terakhir)</h3>
-            <div class="table-container">
-                <table>
-                    <thead><tr><th>Tanggal</th><th>Nama</th><th>In</th><th>Out</th></tr></thead>
-                    <tbody>
-                        ${cache.attendance
-                            .filter(a => teamMembers.some(m => String(m.id) === String(a.userId)))
-                            .sort((a,b) => b.date.localeCompare(a.date))
-                            .slice(0, 20) // Ambil 20 record terakhir
-                            .map(a => `<tr>
-                                <td>${formatDate(a.date)}</td>
-                                <td>${a.userName}</td>
-                                <td>${formatTime(a.checkIn)}</td>
-                                <td>${a.checkOut ? formatTime(a.checkOut) : '-'}</td>
-                            </tr>`).join('') || '<tr><td colspan="4" class="empty-state">Belum ada data</td></tr>'}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    `;
-}
-
-// ============================================================
-// REKAP MATRIX (POIN 4: H, W, C, D, S, A)
-// ============================================================
-function renderRekap(container) {
-    const now = new Date();
-    const start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
-    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
-    container.innerHTML = `
-        <div class="card">
-            <h3>📈 Rekap Matrix Kehadiran</h3>
-            <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:end;">
-                <div class="form-group" style="flex:1;min-width:140px;"><label>Dari</label><input type="date" id="rekapStart" value="${start}"></div>
-                <div class="form-group" style="flex:1;min-width:140px;"><label>Sampai</label><input type="date" id="rekapEnd" value="${end}"></div>
-                <button class="btn btn-primary" onclick="generateRekap()">📊 Tampilkan</button>
-            </div>
-            <div style="margin-top: 10px; font-size: 0.8rem; color: #475569;">
-                <strong>Keterangan:</strong> 
-                <span class="badge badge-success">H</span> Hadir &nbsp;
-                <span class="badge badge-info">W</span> WFH &nbsp;
-                <span class="badge badge-warning">C</span> Cuti &nbsp;
-                <span class="badge" style="background:#e0e7ff;color:#1e40af;">D</span> Dinas &nbsp;
-                <span class="badge" style="background:#fce7f3;color:#991b1b;">S</span> Sakit &nbsp;
-                <span class="badge badge-danger">A</span> Alpha
-            </div>
-        </div>
-        <div id="rekapResult" style="overflow-x: auto;"></div>
-    `;
-    generateRekap();
-}
-
-async function generateRekap() {
-    const startDate = document.getElementById('rekapStart').value;
-    const endDate = document.getElementById('rekapEnd').value;
-    if (!startDate || !endDate) return;
-    
-    const res = await api('getRekap', { startDate, endDate });
-    if (!res.success) return showNotification(res.message, 'error');
-    
-    const { tanggalKerja, matrix } = res.data;
-    
-    // Bangun Header Tabel (Tanggal)
-    let headerHtml = '<th style="position:sticky; left:0; background:#f1f5f9; z-index:2; min-width:150px;">Nama Karyawan</th>';
-    tanggalKerja.forEach(tgl => {
-        const d = new Date(tgl);
-        const dayName = ['Min','Sen','Sel','Rab','Kam','Jum','Sab'][d.getDay()];
-        const dateNum = d.getDate();
-        headerHtml += `<th style="text-align:center; min-width:35px; padding:4px;" title="${tgl}">${dayName}<br>${dateNum}</th>`;
-    });
-
-    // Bangun Body Tabel
-    let bodyHtml = '';
-    matrix.forEach(row => {
-        let rowHtml = `<td style="position:sticky; left:0; background:white; z-index:1; font-weight:600;">${row.userName}<br><span style="font-size:0.7rem; font-weight:normal; color:#64748b;">${row.jabatan}</span></td>`;
-        tanggalKerja.forEach(tgl => {
-            const status = row.statusHarian[tgl];
-            let badgeClass = '';
-            let textColor = '#1e293b';
-            if (status === 'H') badgeClass = 'badge-success';
-            else if (status === 'W') badgeClass = 'badge-info';
-            else if (status === 'C') badgeClass = 'badge-warning';
-            else if (status === 'D') { badgeClass = 'badge'; textColor = '#1e40af'; }
-            else if (status === 'S') { badgeClass = 'badge'; textColor = '#991b1b'; }
-            else if (status === 'A') badgeClass = 'badge-danger';
-            
-            rowHtml += `<td style="text-align:center; padding:8px 4px;">
-                <span class="badge ${badgeClass}" style="color:${textColor}; font-size:0.7rem; width:24px; height:24px; display:inline-flex; align-items:center; justify-content:center; border-radius:50%; background:${status==='D' ? '#e0e7ff' : status==='S' ? '#fce7f3' : ''}">${status}</span>
-            </td>`;
-        });
-        bodyHtml += `<tr>${rowHtml}</tr>`;
-    });
-
-    document.getElementById('rekapResult').innerHTML = `
-        <div class="card" style="padding:0; overflow:hidden;">
-            <div class="table-container" style="border:none; margin:0;">
-                <table style="border-collapse: separate; border-spacing: 0;">
-                    <thead><tr>${headerHtml}</tr></thead>
-                    <tbody>${bodyHtml}</tbody>
-                </table>
-            </div>
-        </div>
-    `;
-}
-
-// ============================================================
-// FUNGSI LAINNYA (APPROVAL, MASTER, PROFIL, DLL) - TETAP SAMA
+// 4. PROFIL
 // ============================================================
 function renderProfil(container) {
     const tunj = (cache.tunjangan || []).filter(t => String(t.userId) === String(currentUser.id));
@@ -524,55 +482,138 @@ function renderProfil(container) {
     `;
 }
 
-function renderApproval(container) {
-    const allLeaves = (cache.leaves || []).slice().reverse();
-    const allOvertime = (cache.overtime || []).slice().reverse();
+// ============================================================
+// 5. TIM SAYA (Atasan / Supervisor)
+// ============================================================
+function renderTeam(container) {
+    const today = todayStr();
+    const myDept = currentUser.department;
+    const teamMembers = cache.users.filter(u => u.department === myDept && String(u.id) !== String(currentUser.id));
+    const teamAtt = cache.attendance.filter(a => a.date === today && teamMembers.some(m => String(m.id) === String(a.userId)));
+
     container.innerHTML = `
         <div class="card">
-            <h3>✅ Approval Izin/Cuti</h3>
-            <div class="table-container"><table>
-                <thead><tr><th>Karyawan</th><th>Jenis</th><th>Tanggal</th><th>Status</th><th>Aksi</th></tr></thead>
-                <tbody>${allLeaves.map(l => `<tr>
-                    <td><strong>${l.userName}</strong></td><td>${l.type}</td><td>${formatDate(l.startDate)} - ${formatDate(l.endDate)}</td>
-                    <td><span class="status-badge status-${l.status}">${l.status}</span></td>
-                    <td>${l.status === 'pending' ? `<div class="action-buttons">
-                        <button class="btn btn-success btn-sm" onclick="approveLeave(${l.id}, 'approved')">✅</button>
-                        <button class="btn btn-danger btn-sm" onclick="approveLeave(${l.id}, 'rejected')">❌</button>
-                    </div>` : '<span style="color:#94a3b8;font-size:0.75rem;">' + (l.approvedBy || '-') + '</span>'}</td>
-                </tr>`).join('') || '<tr><td colspan="5" class="empty-state">Tidak ada</td></tr>'}</tbody>
-            </table></div>
+            <h3>👥 Absensi Tim (${myDept}) Hari Ini</h3>
+            <div class="table-container">
+                <table>
+                    <thead><tr><th>Nama</th><th>Jabatan</th><th>Check In</th><th>Check Out</th><th>Status</th></tr></thead>
+                    <tbody>
+                        ${teamMembers.map(m => {
+                            const rec = teamAtt.find(a => String(a.userId) === String(m.id));
+                            return `<tr>
+                                <td><strong>${m.name}</strong></td>
+                                <td>${m.jabatan || '-'}</td>
+                                <td>${rec && rec.checkIn ? formatTime(rec.checkIn) : '<span style="color:#94a3b8;">-</span>'}</td>
+                                <td>${rec && rec.checkOut ? formatTime(rec.checkOut) : '<span style="color:#94a3b8;">-</span>'}</td>
+                                <td>${rec ? '<span class="badge badge-success">Hadir</span>' : '<span class="badge badge-danger">Belum Absen</span>'}</td>
+                            </tr>`;
+                        }).join('') || '<tr><td colspan="5" class="empty-state">Tidak ada anggota tim</td></tr>'}
+                    </tbody>
+                </table>
+            </div>
         </div>
         <div class="card">
-            <h3>🕒 Approval Lembur</h3>
-            <div class="table-container"><table>
-                <thead><tr><th>Karyawan</th><th>Tanggal</th><th>Waktu</th><th>Status</th><th>Aksi</th></tr></thead>
-                <tbody>${allOvertime.map(o => `<tr>
-                    <td><strong>${o.userName}</strong></td><td>${formatDate(o.date)}</td><td>${o.startTime}-${o.endTime}</td>
-                    <td><span class="status-badge status-${o.status}">${o.status}</span></td>
-                    <td>${o.status === 'pending' ? `<div class="action-buttons">
-                        <button class="btn btn-success btn-sm" onclick="approveOvertime(${o.id}, 'approved')">✅</button>
-                        <button class="btn btn-danger btn-sm" onclick="approveOvertime(${o.id}, 'rejected')">❌</button>
-                    </div>` : '<span style="color:#94a3b8;font-size:0.75rem;">' + (o.approvedBy || '-') + '</span>'}</td>
-                </tr>`).join('') || '<tr><td colspan="5" class="empty-state">Tidak ada</td></tr>'}</tbody>
-            </table></div>
+            <h3>📋 Riwayat Tim (7 Hari Terakhir)</h3>
+            <div class="table-container">
+                <table>
+                    <thead><tr><th>Tanggal</th><th>Nama</th><th>In</th><th>Out</th></tr></thead>
+                    <tbody>
+                        ${cache.attendance
+                            .filter(a => teamMembers.some(m => String(m.id) === String(a.userId)))
+                            .sort((a,b) => b.date.localeCompare(a.date))
+                            .slice(0, 20)
+                            .map(a => `<tr>
+                                <td>${formatDate(a.date)}</td>
+                                <td>${a.userName}</td>
+                                <td>${formatTime(a.checkIn)}</td>
+                                <td>${a.checkOut ? formatTime(a.checkOut) : '-'}</td>
+                            </tr>`).join('') || '<tr><td colspan="4" class="empty-state">Belum ada data</td></tr>'}
+                    </tbody>
+                </table>
+            </div>
         </div>
     `;
 }
-async function approveLeave(id, status) { const res = await api('approveLeave', { id, status, approverName: currentUser.name }); if (res.success) { showNotification(`Izin ${status === 'approved' ? 'disetujui' : 'ditolak'}`); await loadAllCache(); renderTabContent(); } else showNotification(res.message, 'error'); }
-async function approveOvertime(id, status) { const res = await api('approveOvertime', { id, status, approverName: currentUser.name }); if (res.success) { showNotification(`Lembur ${status === 'approved' ? 'disetujui' : 'ditolak'}`); await loadAllCache(); renderTabContent(); } else showNotification(res.message, 'error'); }
 
-// MENU ADMIN & MASTER (Sama seperti sebelumnya)
+// ============================================================
+// 6. APPROVAL (Izin & Lembur)
+// ============================================================
+function renderApproval(container) {
+    const allLeaves = (cache.leaves || []).slice().reverse();
+    const allOvertime = (cache.overtime || []).slice().reverse();
+    
+    container.innerHTML = `
+        <div class="card">
+            <h3>✅ Approval Izin/Cuti</h3>
+            <div class="table-container">
+                <table>
+                    <thead><tr><th>Karyawan</th><th>Jenis</th><th>Tanggal</th><th>Alasan</th><th>Status</th><th>Aksi</th></tr></thead>
+                    <tbody>${allLeaves.map(l => `<tr>
+                        <td><strong>${l.userName}</strong></td><td>${l.type}</td>
+                        <td>${formatDate(l.startDate)} - ${formatDate(l.endDate)}</td>
+                        <td>${l.reason}</td>
+                        <td><span class="status-badge status-${l.status}">${l.status}</span></td>
+                        <td>${l.status === 'pending' ? `
+                            <div class="action-buttons">
+                                <button class="btn btn-success btn-sm" onclick="approveLeave(${l.id}, 'approved')">✅</button>
+                                <button class="btn btn-danger btn-sm" onclick="approveLeave(${l.id}, 'rejected')">❌</button>
+                            </div>` : '<span style="color:#94a3b8;font-size:0.75rem;">' + (l.approvedBy || '-') + '</span>'}</td>
+                    </tr>`).join('') || '<tr><td colspan="6" class="empty-state">Tidak ada</td></tr>'}</tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h3>🕒 Approval Lembur</h3>
+            <div class="table-container">
+                <table>
+                    <thead><tr><th>Karyawan</th><th>Tanggal</th><th>Waktu</th><th>Alasan</th><th>Status</th><th>Aksi</th></tr></thead>
+                    <tbody>${allOvertime.map(o => `<tr>
+                        <td><strong>${o.userName}</strong></td><td>${formatDate(o.date)}</td>
+                        <td>${o.startTime} - ${o.endTime}</td>
+                        <td>${o.reason}</td>
+                        <td><span class="status-badge status-${o.status}">${o.status}</span></td>
+                        <td>${o.status === 'pending' ? `
+                            <div class="action-buttons">
+                                <button class="btn btn-success btn-sm" onclick="approveOvertime(${o.id}, 'approved')">✅</button>
+                                <button class="btn btn-danger btn-sm" onclick="approveOvertime(${o.id}, 'rejected')">❌</button>
+                            </div>` : '<span style="color:#94a3b8;font-size:0.75rem;">' + (o.approvedBy || '-') + '</span>'}</td>
+                    </tr>`).join('') || '<tr><td colspan="6" class="empty-state">Tidak ada</td></tr>'}</tbody>
+                </table>
+            </div>
+        </div>
+    `;
+}
+
+async function approveLeave(id, status) {
+    const res = await api('approveLeave', { id, status, approverName: currentUser.name });
+    if (res.success) { showNotification(`Izin ${status === 'approved' ? 'disetujui' : 'ditolak'}`); await loadAllCache(); renderTabContent(); } 
+    else showNotification(res.message, 'error');
+}
+
+async function approveOvertime(id, status) {
+    const res = await api('approveOvertime', { id, status, approverName: currentUser.name });
+    if (res.success) { showNotification(`Lembur ${status === 'approved' ? 'disetujui' : 'ditolak'}`); await loadAllCache(); renderTabContent(); } 
+    else showNotification(res.message, 'error');
+}
+
+// ============================================================
+// 7. KARYAWAN (Admin)
+// ============================================================
 function renderKaryawan(container) {
     container.innerHTML = `
         <div class="card">
             <h3>👥 Daftar Karyawan (${(cache.users || []).length})</h3>
-            <div class="table-container"><table>
-                <thead><tr><th>Nama</th><th>Jabatan</th><th>Level</th><th>Dept</th><th>Role</th></tr></thead>
-                <tbody>${(cache.users || []).map(u => `<tr>
-                    <td><strong>${u.name}</strong></td><td>${u.jabatan || '-'}</td><td>${u.levelJabatan || '-'}</td><td>${u.department || '-'}</td>
-                    <td><span class="badge ${u.role === 'admin' ? 'badge-info' : u.role === 'atasan' ? 'badge-warning' : 'badge-success'}">${u.role}</span></td>
-                </tr>`).join('')}</tbody>
-            </table></div>
+            <div class="table-container">
+                <table>
+                    <thead><tr><th>Nama</th><th>Email</th><th>Jabatan</th><th>Level</th><th>Dept</th><th>Role</th></tr></thead>
+                    <tbody>${(cache.users || []).map(u => `<tr>
+                        <td><strong>${u.name}</strong></td><td>${u.email}</td>
+                        <td>${u.jabatan || '-'}</td><td>${u.levelJabatan || '-'}</td><td>${u.department || '-'}</td>
+                        <td><span class="badge ${u.role === 'admin' ? 'badge-info' : u.role === 'atasan' ? 'badge-warning' : 'badge-success'}">${u.role}</span></td>
+                    </tr>`).join('')}</tbody>
+                </table>
+            </div>
         </div>
         <div class="card">
             <h3>➕ Tambah Karyawan</h3>
@@ -580,22 +621,43 @@ function renderKaryawan(container) {
                 <div class="form-group"><label>Nama</label><input id="nName"></div>
                 <div class="form-group"><label>Email</label><input id="nEmail"></div>
                 <div class="form-group"><label>Password</label><input id="nPass"></div>
-                <div class="form-group"><label>Role</label><select id="nRole"><option value="karyawan">Karyawan</option><option value="atasan">Atasan</option><option value="admin">Admin</option></select></div>
+                <div class="form-group"><label>Role</label>
+                    <select id="nRole"><option value="karyawan">Karyawan</option><option value="atasan">Atasan</option><option value="admin">Admin</option></select>
+                </div>
                 <div class="form-group"><label>Jabatan</label><input id="nJabatan"></div>
-                <div class="form-group"><label>Level Jabatan</label><select id="nLevel"><option value="Staff">Staff</option><option value="Supervisor">Supervisor</option><option value="Manager">Manager</option></select></div>
+                <div class="form-group"><label>Level Jabatan</label>
+                    <select id="nLevel"><option value="Staff">Staff</option><option value="Supervisor">Supervisor</option><option value="Manager">Manager</option></select>
+                </div>
                 <div class="form-group"><label>Dept</label><input id="nDept"></div>
+                <div class="form-group"><label>Gaji</label><input type="number" id="nGaji"></div>
             </div>
             <button class="btn btn-primary" style="margin-top:12px;" onclick="addKaryawan()">➕ Tambah</button>
         </div>
     `;
 }
+
 async function addKaryawan() {
-    const name = document.getElementById('nName').value.trim(); const email = document.getElementById('nEmail').value.trim(); const password = document.getElementById('nPass').value.trim();
+    const name = document.getElementById('nName').value.trim();
+    const email = document.getElementById('nEmail').value.trim();
+    const password = document.getElementById('nPass').value.trim();
     if (!name || !email || !password) return showNotification('Lengkapi!', 'error');
-    const res = await api('createUser', { data: { name, email, password, role: document.getElementById('nRole').value, jabatan: document.getElementById('nJabatan').value, levelJabatan: document.getElementById('nLevel').value, department: document.getElementById('nDept').value, gaji: 0, tunjangan: 0 } });
-    if (res.success) { showNotification('✅'); await loadAllCache(); renderTabContent(); } else showNotification(res.message, 'error');
+    const res = await api('createUser', {
+        data: {
+            name, email, password,
+            role: document.getElementById('nRole').value,
+            jabatan: document.getElementById('nJabatan').value,
+            levelJabatan: document.getElementById('nLevel').value,
+            department: document.getElementById('nDept').value,
+            gaji: Number(document.getElementById('nGaji').value) || 0
+        }
+    });
+    if (res.success) { showNotification('✅ Karyawan ditambahkan'); await loadAllCache(); renderTabContent(); } 
+    else showNotification(res.message, 'error');
 }
 
+// ============================================================
+// 8. MASTER DATA (Admin)
+// ============================================================
 function renderMaster(container) {
     container.innerHTML = `
         <div class="card">
@@ -650,6 +712,9 @@ async function addJabatan() { const name = document.getElementById('jabName').va
 async function addTunjangan() { const userId = document.getElementById('tunjUser').value; const nama = document.getElementById('tunjNama').value.trim(); const jumlah = Number(document.getElementById('tunjJumlah').value); if (!nama || !jumlah) return showNotification('Lengkapi!', 'error'); const res = await api('createTunjangan', { data: { userId, nama, jumlah, periode: 'Bulanan' } }); if (res.success) { showNotification('✅'); await loadAllCache(); renderTabContent(); } }
 async function delTunjangan(id) { const res = await api('deleteTunjangan', { id }); if (res.success) { showNotification('Dihapus'); await loadAllCache(); renderTabContent(); } }
 
+// ============================================================
+// 9. SK & SP (Admin)
+// ============================================================
 function renderDokumen(container) {
     container.innerHTML = `
         <div class="card">
@@ -691,6 +756,9 @@ function renderDokumen(container) {
 async function addSK() { const userId = document.getElementById('skUser').value; const user = (cache.users || []).find(u => String(u.id) === String(userId)); const nomor = document.getElementById('skNomor').value.trim(); if (!nomor) return showNotification('Nomor wajib!', 'error'); const res = await api('createSK', { data: { userId, userName: user.name, nomor, tanggal: document.getElementById('skTgl').value || todayStr(), keterangan: document.getElementById('skKet').value, status: 'aktif' } }); if (res.success) { showNotification('✅'); await loadAllCache(); renderTabContent(); } }
 async function addSP() { const userId = document.getElementById('spUser').value; const user = (cache.users || []).find(u => String(u.id) === String(userId)); const res = await api('createSP', { data: { userId, userName: user.name, level: document.getElementById('spLevel').value, tanggal: document.getElementById('spTgl').value || todayStr(), alasan: document.getElementById('spAlasan').value, status: 'aktif' } }); if (res.success) { showNotification('⚠️ SP ditambahkan'); await loadAllCache(); renderTabContent(); } }
 
+// ============================================================
+// 10. PENGATURAN (Admin)
+// ============================================================
 function renderPengaturan(container) {
     const s = cache.settings || {};
     const hariList = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu'];
@@ -738,6 +806,120 @@ function renderPengaturan(container) {
 async function savePengaturan() { const hariKerja = Array.from(document.querySelectorAll('.hariCb:checked')).map(c => c.value); const data = { hariKerja: JSON.stringify(hariKerja), jamMasuk: document.getElementById('jamMasuk').value, jamKeluar: document.getElementById('jamKeluar').value, toleransi: String(document.getElementById('toleransi').value), cutiTahunan: String(document.getElementById('cutiTahunan').value), radiusLokasi: String(document.getElementById('radiusLokasi').value), kantorLat: document.getElementById('kantorLat').value, kantorLng: document.getElementById('kantorLng').value }; const res = await api('saveSettings', { data }); if (res.success) { showNotification('✅ Pengaturan disimpan'); await loadAllCache(); renderTabContent(); } }
 async function addCB() { const tanggal = document.getElementById('cbTgl').value; const keterangan = document.getElementById('cbKet').value.trim(); if (!tanggal || !keterangan) return showNotification('Lengkapi!', 'error'); const res = await api('createCutiBersama', { data: { tanggal, keterangan } }); if (res.success) { showNotification('✅'); await loadAllCache(); renderTabContent(); } }
 async function delCB(id) { const res = await api('deleteCutiBersama', { id }); if (res.success) { showNotification('Dihapus'); await loadAllCache(); renderTabContent(); } }
+
+// ============================================================
+// 11. REKAP MATRIX (H, W, C, D, S, A)
+// ============================================================
+function renderRekap(container) {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0];
+    const end = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0];
+    
+    container.innerHTML = `
+        <div class="card">
+            <h3>📈 Rekap Matrix Kehadiran</h3>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:end;">
+                <div class="form-group" style="flex:1;min-width:140px;"><label>Dari</label><input type="date" id="rekapStart" value="${start}"></div>
+                <div class="form-group" style="flex:1;min-width:140px;"><label>Sampai</label><input type="date" id="rekapEnd" value="${end}"></div>
+                <button type="button" class="btn btn-primary" id="btnTampilkanRekap">📊 Tampilkan</button>
+            </div>
+            <div style="margin-top: 10px; font-size: 0.8rem; color: #475569;">
+                <strong>Keterangan:</strong> 
+                <span class="badge badge-success">H</span> Hadir &nbsp;
+                <span class="badge badge-info">W</span> WFH &nbsp;
+                <span class="badge badge-warning">C</span> Cuti &nbsp;
+                <span class="badge" style="background:#e0e7ff;color:#1e40af;">D</span> Dinas &nbsp;
+                <span class="badge" style="background:#fce7f3;color:#991b1b;">S</span> Sakit &nbsp;
+                <span class="badge badge-danger">A</span> Alpha
+            </div>
+        </div>
+        <div id="rekapResult" style="overflow-x: auto;">
+            <div class="empty-state">Klik tombol "Tampilkan" untuk memuat data.</div>
+        </div>
+    `;
+
+    const btn = document.getElementById('btnTampilkanRekap');
+    if (btn) {
+        btn.onclick = function() {
+            generateRekap();
+        };
+    }
+}
+
+async function generateRekap() {
+    const startDate = document.getElementById('rekapStart').value;
+    const endDate = document.getElementById('rekapEnd').value;
+    const resultDiv = document.getElementById('rekapResult');
+    
+    if (!startDate || !endDate) {
+        showNotification('Pilih tanggal mulai dan selesai!', 'error');
+        return;
+    }
+
+    resultDiv.innerHTML = '<div class="empty-state">⏳ Memuat data rekap...</div>';
+
+    try {
+        const res = await api('getRekap', { startDate, endDate });
+        
+        if (!res.success) {
+            resultDiv.innerHTML = `<div class="empty-state" style="color:red;">Gagal: ${res.message}</div>`;
+            return;
+        }
+        
+        const { tanggalKerja, matrix } = res.data;
+        
+        if (!tanggalKerja || tanggalKerja.length === 0) {
+            resultDiv.innerHTML = '<div class="empty-state">Tidak ada hari kerja pada periode ini.</div>';
+            return;
+        }
+
+        let headerHtml = '<th style="position:sticky; left:0; background:#f1f5f9; z-index:2; min-width:150px;">Nama Karyawan</th>';
+        tanggalKerja.forEach(tgl => {
+            const d = new Date(tgl);
+            const dayName = ['Min','Sen','Sel','Rab','Kam','Jum','Sab'][d.getDay()];
+            const dateNum = d.getDate();
+            headerHtml += `<th style="text-align:center; min-width:35px; padding:4px;" title="${tgl}">${dayName}<br>${dateNum}</th>`;
+        });
+
+        let bodyHtml = '';
+        matrix.forEach(row => {
+            let rowHtml = `<td style="position:sticky; left:0; background:white; z-index:1; font-weight:600;">${row.userName}<br><span style="font-size:0.7rem; font-weight:normal; color:#64748b;">${row.jabatan || '-'}</span></td>`;
+            
+            tanggalKerja.forEach(tgl => {
+                const status = row.statusHarian[tgl] || '-';
+                let bgColor = '#f1f5f9';
+                let textColor = '#1e293b';
+                
+                if (status === 'H') { bgColor = '#d1fae5'; textColor = '#065f46'; }
+                else if (status === 'W') { bgColor = '#dbeafe'; textColor = '#1e40af'; }
+                else if (status === 'C') { bgColor = '#fef3c7'; textColor = '#92400e'; }
+                else if (status === 'D') { bgColor = '#e0e7ff'; textColor = '#1e40af'; }
+                else if (status === 'S') { bgColor = '#fce7f3'; textColor = '#991b1b'; }
+                else if (status === 'A') { bgColor = '#fee2e2'; textColor = '#991b1b'; }
+                
+                rowHtml += `<td style="text-align:center; padding:6px 4px;">
+                    <span style="display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:50%; font-size:0.75rem; font-weight:700; background:${bgColor}; color:${textColor};">${status}</span>
+                </td>`;
+            });
+            bodyHtml += `<tr>${rowHtml}</tr>`;
+        });
+
+        resultDiv.innerHTML = `
+            <div class="card" style="padding:0; overflow:hidden;">
+                <div class="table-container" style="border:none; margin:0;">
+                    <table style="border-collapse: separate; border-spacing: 0; min-width: 100%;">
+                        <thead><tr>${headerHtml}</tr></thead>
+                        <tbody>${bodyHtml || '<tr><td colspan="100" class="empty-state">Belum ada data</td></tr>'}</tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+
+    } catch (err) {
+        console.error(err);
+        resultDiv.innerHTML = `<div class="empty-state" style="color:red;">Error Sistem: ${err.message}</div>`;
+    }
+}
 
 // ============================================================
 // START
