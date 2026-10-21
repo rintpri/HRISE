@@ -512,7 +512,7 @@ async function generateRekap() {
         
         window.lastRekapData = { tanggalKerja, matrix };
 
-        let headerHtml = '<th style="position:sticky; left:0; background:#f1f5f9; z-index:2;">Nama</th>';
+        let headerHtml = '<th style="position:sticky; left:0; background:#f1f5f9; z-index:2; min-width:150px;">Nama</th>';
         tanggalKerja.forEach(tgl => {
             const d = new Date(tgl), dayName = ['Min','Sen','Sel','Rab','Kam','Jum','Sab'][d.getDay()], dateNum = d.getDate();
             let bgColor = '#f1f5f9';
@@ -540,8 +540,10 @@ async function generateRekap() {
                 else if (status === 'D') { bgStatus = '#e0e7ff'; textColor = '#1e40af'; }
                 else if (status === 'S') { bgStatus = '#fce7f3'; textColor = '#991b1b'; }
                 else if (status === 'A') { bgStatus = '#fee2e2'; textColor = '#991b1b'; }
+                else if (status === 'OT') { bgStatus = '#e9d5ff'; textColor = '#6b21a8'; } // Lembur
+                else if (status === 'L') { bgStatus = '#f1f5f9'; textColor = '#64748b'; } // Libur
 
-                let badgeStyle = `display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:50%; font-size:0.75rem; font-weight:700; background:${bgStatus}; color:${textColor};`;
+                let badgeStyle = `display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:50%; font-size:0.7rem; font-weight:700; background:${bgStatus}; color:${textColor};`;
                 if (isWeekend) badgeStyle += ' border: 1px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.1);';
 
                 rowHtml += `<td style="text-align:center; padding:6px 4px; background:${cellBg};"><span style="${badgeStyle}">${status}</span></td>`;
