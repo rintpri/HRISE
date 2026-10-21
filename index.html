@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HRIS - Attendance & Approval System</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div class="app-container" id="app">
+    <header class="app-header">
+        <div class="logo">
+            <h1>HRIS<span>Enterprise Edition</span></h1>
+        </div>
+        <div class="user-info hidden" id="userInfo">
+            <span class="user-badge" id="userNameDisplay">-</span>
+            <span class="role-badge" id="userRoleDisplay">-</span>
+            <button class="logout-btn" id="logoutBtn">Logout</button>
+        </div>
+    </header>
+    <main class="main-content" id="mainContent">
+        <div id="loadingScreen" class="loading-screen">
+            <div class="spinner"></div>
+            <p>Memuat...</p>
+        </div>
+        <div id="loginScreen" class="login-screen hidden">
+            <h2>🔐 Login HRIS</h2>
+            <div class="form-group">
+                <label>Email</label>
+                <input type="text" id="loginEmail" value="admin@hris.com" placeholder="email@hris.com">
+            </div>
+            <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="loginPassword" value="admin123" placeholder="Password">
+            </div>
+            <div class="form-group">
+                <label>Role</label>
+                <select id="loginRole">
+                    <option value="admin">Admin</option>
+                    <option value="atasan">Atasan</option>
+                    <option value="karyawan">Karyawan</option>
+                </select>
+            </div>
+            <button class="btn btn-primary btn-full" id="loginBtn">Masuk</button>
+            <p class="login-hint">
+                Demo:<br>
+                admin@hris.com / admin123<br>
+                atasan@hris.com / atasan123<br>
+                karyawan@hris.com / karyawan123
+            </p>
+            <div id="apiStatus" class="api-status"></div>
+        </div>
+        <div id="dashboardScreen" class="hidden">
+            <div class="tabs" id="tabsContainer"></div>
+            <div id="tabContent"></div>
+        </div>
+    </main>
+</div>
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
