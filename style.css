@@ -343,3 +343,31 @@ video, canvas { border-radius: 12px; background: #0f172a; width: 100%; max-heigh
     .tabs::-webkit-scrollbar { display: none; }
     .tabs { -ms-overflow-style: none; scrollbar-width: none; }
 }
+/* ============================================================
+   PRINT STYLES (UNTUK CETAK PDF)
+   ============================================================ */
+@media print {
+    /* Sembunyikan semua elemen kecuali bagian rekap */
+    body * { visibility: hidden; }
+    #rekapResult, #rekapResult * { visibility: visible; }
+    
+    /* Posisikan tabel rekap di paling atas kertas */
+    #rekapResult { position: absolute; left: 0; top: 0; width: 100%; }
+    
+    /* Sembunyikan tombol, header, dan tabs saat diprint */
+    .app-header, .tabs, .main-content > .card, .btn, .action-buttons, #logoutBtn { display: none !important; }
+    
+    /* Sesuaikan ukuran kertas jadi landscape (mendatar) */
+    @page { size: landscape; margin: 10mm; }
+    
+    /* Pastikan background warna tetap tercetak */
+    * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+    
+    /* Hilangkan shadow dan border berlebih */
+    .card { box-shadow: none !important; border: none !important; }
+    .table-container { border: 1px solid #000 !important; }
+    
+    /* Perkecil font tabel agar muat */
+    table { font-size: 10px !important; }
+    th, td { padding: 4px !important; }
+}
