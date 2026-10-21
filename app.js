@@ -33,30 +33,38 @@ function todayStr() { return new Date().toISOString().split('T')[0]; }
 
 // AUTH (LOGIN NAMA DEPAN & PASS123)
 async function doLogin() {
-    const inputName = document.getElementById('loginEmail').value.trim().toLowerCase();
+    const inputLogin = document.getElementById('loginEmail').value.trim().toLowerCase();
     const inputPass = document.getElementById('loginPassword').value.trim();
     
-    if (!inputName || !inputPass) return showNotification('Nama dan password wajib diisi!', 'error');
+    if (!inputLogin || !inputPass) return showNotification('Nama/Email dan password wajib diisi!', 'error');
     const btn = document.getElementById('loginBtn'); btn.disabled = true; btn.textContent = '⏳ Login...';
     
     try {
         const resUsers = await api('getUsers');
         if (!resUsers.success) throw new Error('Gagal mengambil data user');
 
+        // Cari user: Apakah input adalah Email (khusus admin) ATAU Nama Depan?
         const matchedUser = resUsers.data.find(u => {
+            const userEmail = String(u.email).toLowerCase();
             const firstName = String(u.name).split(' ')[0].toLowerCase();
-            return firstName === inputName;
+            
+            // Jika yang diketik adalah email, cocokkan dengan email
+            if (inputLogin.includes('@')) return userEmail === inputLogin;
+            // Jika bukan email, cocokkan dengan nama depan
+            return firstName === inputLogin;
         });
 
         if (!matchedUser) {
             btn.disabled = false; btn.textContent = 'Masuk';
-            return showNotification('Nama tidak ditemukan!', 'error');
+            return showNotification('Akun tidak ditemukan!', 'error');
         }
 
         let isValid = false;
         if (matchedUser.role === 'admin') {
+            // Admin: Bisa pakai password database (asli)
             isValid = String(matchedUser.password) === inputPass;
         } else {
+            // Karyawan/Atasan: Bisa pakai pass123 ATAU password database
             isValid = (inputPass === 'pass123') || (String(matchedUser.password) === inputPass);
         }
 
