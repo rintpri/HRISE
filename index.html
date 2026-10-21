@@ -1,13 +1,61 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>HRIS - Attendance & Approval System</title>
-<link rel="stylesheet" href="style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HRIS - Attendance & Approval System</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* Sedikit penyesuaian untuk jam berjalan di dashboard */
+        .clock-container {
+            background: linear-gradient(135deg, #2563eb, #1e40af);
+            color: white;
+            padding: 30px 20px;
+            border-radius: 20px;
+            text-align: center;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 25px rgba(37, 99, 235, 0.3);
+        }
+        .clock-time {
+            font-size: 3.5rem;
+            font-weight: 800;
+            letter-spacing: 2px;
+            margin-bottom: 8px;
+            font-family: 'Courier New', Courier, monospace;
+        }
+        .clock-date {
+            font-size: 1.1rem;
+            opacity: 0.9;
+            font-weight: 500;
+        }
+        .info-box {
+            background: #fffbeb;
+            border: 1px solid #fde68a;
+            border-radius: 12px;
+            padding: 12px;
+            font-size: 0.85rem;
+            color: #92400e;
+            margin-top: 16px;
+        }
+        .leave-card {
+            text-align: center;
+            background: #f8fafc;
+            padding: 20px;
+            border-radius: 16px;
+            border: 1px solid #e2e8f0;
+        }
+        .leave-number {
+            font-size: 3rem;
+            font-weight: 900;
+            color: #2563eb;
+            line-height: 1;
+            margin: 10px 0;
+        }
+    </style>
 </head>
 <body>
 <div class="app-container" id="app">
+    <!-- Header -->
     <header class="app-header">
         <div class="logo">
             <h1>HRIS<span>Enterprise Edition</span></h1>
@@ -18,11 +66,17 @@
             <button class="logout-btn" id="logoutBtn">Logout</button>
         </div>
     </header>
+
+    <!-- Main Content -->
     <main class="main-content" id="mainContent">
+        
+        <!-- Loading Screen -->
         <div id="loadingScreen" class="loading-screen">
             <div class="spinner"></div>
-            <p>Memuat...</p>
+            <p>Memuat Aplikasi...</p>
         </div>
+
+        <!-- Login Screen -->
         <div id="loginScreen" class="login-screen hidden">
             <h2>🔐 Login HRIS</h2>
             <div class="form-group">
@@ -43,20 +97,25 @@
             </div>
             <button class="btn btn-primary btn-full" id="loginBtn">Masuk</button>
             <p class="login-hint">
-                Demo:<br>
-                admin@hris.com / admin123<br>
-                atasan@hris.com / atasan123<br>
-                karyawan@hris.com / karyawan123
+                Akun Demo:<br>
+                <strong>Admin:</strong> admin@hris.com / admin123<br>
+                <strong>Atasan:</strong> atasan@hris.com / atasan123<br>
+                <strong>Karyawan:</strong> karyawan@hris.com / karyawan123
             </p>
             <div id="apiStatus" class="api-status"></div>
         </div>
+
+        <!-- Dashboard Screen (Isi dinamis dimuat oleh app.js) -->
         <div id="dashboardScreen" class="hidden">
             <div class="tabs" id="tabsContainer"></div>
             <div id="tabContent"></div>
         </div>
     </main>
 </div>
+
+<!-- Panggil Konfigurasi dan Script Utama -->
 <script src="config.js"></script>
 <script src="app.js"></script>
+
 </body>
 </html>
