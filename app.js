@@ -31,7 +31,7 @@ function formatTime(d) { return d ? new Date(d).toLocaleTimeString('id-ID', { ho
 function formatRupiah(n) { return 'Rp ' + (n || 0).toLocaleString('id-ID'); }
 function todayStr() { return new Date().toISOString().split('T')[0]; }
 
-// AUTH (LOGIN NAMA DEPAN & PASS123)
+// AUTH (LOGIN EMAIL ATAU NAMA DEPAN)
 async function doLogin() {
     const inputLogin = document.getElementById('loginEmail').value.trim().toLowerCase();
     const inputPass = document.getElementById('loginPassword').value.trim();
@@ -43,14 +43,10 @@ async function doLogin() {
         const resUsers = await api('getUsers');
         if (!resUsers.success) throw new Error('Gagal mengambil data user');
 
-        // Cari user: Apakah input adalah Email (khusus admin) ATAU Nama Depan?
         const matchedUser = resUsers.data.find(u => {
             const userEmail = String(u.email).toLowerCase();
             const firstName = String(u.name).split(' ')[0].toLowerCase();
-            
-            // Jika yang diketik adalah email, cocokkan dengan email
             if (inputLogin.includes('@')) return userEmail === inputLogin;
-            // Jika bukan email, cocokkan dengan nama depan
             return firstName === inputLogin;
         });
 
@@ -61,10 +57,8 @@ async function doLogin() {
 
         let isValid = false;
         if (matchedUser.role === 'admin') {
-            // Admin: Bisa pakai password database (asli)
             isValid = String(matchedUser.password) === inputPass;
         } else {
-            // Karyawan/Atasan: Bisa pakai pass123 ATAU password database
             isValid = (inputPass === 'pass123') || (String(matchedUser.password) === inputPass);
         }
 
@@ -518,17 +512,15 @@ async function generateRekap() {
         
         window.lastRekapData = { tanggalKerja, matrix };
 
-        // HEADER DENGAN WARNA SABTU / MINGGU
         let headerHtml = '<th style="position:sticky; left:0; background:#f1f5f9; z-index:2;">Nama</th>';
         tanggalKerja.forEach(tgl => {
             const d = new Date(tgl), dayName = ['Min','Sen','Sel','Rab','Kam','Jum','Sab'][d.getDay()], dateNum = d.getDate();
             let bgColor = '#f1f5f9';
-            if (d.getDay() === 6) bgColor = '#bae6fd'; // Sabtu Biru Tebal
-            else if (d.getDay() === 0) bgColor = '#fbcfe8'; // Minggu Pink Tebal
+            if (d.getDay() === 6) bgColor = '#bae6fd';
+            else if (d.getDay() === 0) bgColor = '#fbcfe8';
             headerHtml += `<th style="text-align:center; padding:4px; background:${bgColor}; color:#1e293b;" title="${tgl}">${dayName}<br>${dateNum}</th>`;
         });
 
-        // BODY DENGAN WARNA SABTU / MINGGU
         let bodyHtml = '';
         matrix.forEach(row => {
             let rowHtml = `<td style="position:sticky; left:0; background:white; z-index:1; font-weight:600;">${row.userName}<br><span style="font-size:0.7rem; font-weight:normal; color:#64748b;">${row.jabatan || '-'}</span></td>`;
@@ -538,8 +530,8 @@ async function generateRekap() {
                 const status = row.statusHarian[tgl] || '-';
                 
                 let cellBg = 'transparent';
-                if (d.getDay() === 6) cellBg = '#e0f2fe'; // Sabtu
-                else if (d.getDay() === 0) cellBg = '#fce7f3'; // Minggu
+                if (d.getDay() === 6) cellBg = '#e0f2fe';
+                else if (d.getDay() === 0) cellBg = '#fce7f3';
 
                 let bgStatus = '#f1f5f9', textColor = '#1e293b';
                 if (status === 'H') { bgStatus = '#d1fae5'; textColor = '#065f46'; }
