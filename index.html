@@ -5,12 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>HRIS - Attendance & Approval System</title>
     <link rel="stylesheet" href="style.css">
-    <!-- Tambahkan baris ini di dalam tag <head> -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- Library untuk Export Excel -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 <body>
 <div class="app-container" id="app">
-    <!-- Header -->
     <header class="app-header">
         <div class="logo">
             <h1>HRIS<span>Enterprise Edition</span></h1>
@@ -22,16 +21,12 @@
         </div>
     </header>
 
-    <!-- Main Content -->
     <main class="main-content" id="mainContent">
-        
-        <!-- Loading Screen -->
         <div id="loadingScreen" class="loading-screen">
             <div class="spinner"></div>
             <p>Memuat Aplikasi...</p>
         </div>
 
-        <!-- Login Screen -->
         <div id="loginScreen" class="login-screen hidden">
             <h2>🔐 Login HRIS</h2>
             <div class="form-group">
@@ -60,7 +55,6 @@
             <div id="apiStatus" class="api-status"></div>
         </div>
 
-        <!-- Dashboard Screen -->
         <div id="dashboardScreen" class="hidden">
             <div class="tabs" id="tabsContainer"></div>
             <div id="tabContent"></div>
@@ -68,9 +62,7 @@
     </main>
 </div>
 
-<!-- URUTAN SCRIPT SANGAT PENTING -->
 <script src="config.js"></script>
 <script src="app.js"></script>
-
 </body>
 </html>
