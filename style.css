@@ -241,6 +241,9 @@ body {
 }
 .login-screen h2 { text-align: center; margin-bottom: 24px; color: #1e293b; font-size: 1.5rem; }
 .login-hint { margin-top: 16px; font-size: 0.75rem; color: #94a3b8; text-align: center; line-height: 1.6; }
+.api-status { margin-top: 12px; text-align: center; font-size: 0.8rem; }
+.api-status.ok { color: #10b981; }
+.api-status.error { color: #ef4444; }
 
 /* ============================================================
    TABLES & BADGES
@@ -327,22 +330,16 @@ video, canvas { border-radius: 12px; background: #0f172a; width: 100%; max-heigh
     .user-info { width: 100%; justify-content: space-between; padding: 6px 12px; }
     .login-screen { padding: 24px 16px; margin: 10px auto; }
     .login-screen h2 { font-size: 1.3rem; }
-    
     .card { padding: 16px; margin-bottom: 16px; }
     .card h3 { font-size: 1rem; }
-    
     .stat-value { font-size: 1.5rem; }
     .leave-number { font-size: 2.5rem; }
-    
     .btn { width: 100%; }
     .action-buttons { flex-direction: column; gap: 6px; width: 100%; }
     .action-buttons .btn { width: 100%; }
-    
     .grid-auto { grid-template-columns: 1fr; }
-    
     .info-row { flex-direction: column; align-items: flex-start; gap: 4px; }
     .info-value { text-align: left; }
-    
     .tabs::-webkit-scrollbar { display: none; }
     .tabs { -ms-overflow-style: none; scrollbar-width: none; }
 }
