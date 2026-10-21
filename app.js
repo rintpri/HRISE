@@ -521,7 +521,7 @@ function renderPengaturan(container) {
 }
 
 // ============================================================
-// 8. REKAP MATRIX
+// 8. REKAP MATRIX (Update: Warna Weekend, Print PDF, Excel)
 // ============================================================
 function renderRekap(container) {
     const now = new Date();
@@ -532,59 +532,187 @@ function renderRekap(container) {
         <div class="card">
             <h3>📈 Rekap Matrix Kehadiran</h3>
             <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:end;">
-                <div class="form-group" style="flex:1;min-width:140px;"><label>Dari</label><input type="date" id="rekapStart" value="${start}"></div>
-                <div class="form-group" style="flex:1;min-width:140px;"><label>Sampai</label><input type="date" id="rekapEnd" value="${end}"></div>
+                <div class="form-group" style="flex:1;min-width:140px;margin-bottom:0;">
+                    <label>Dari</label><input type="date" id="rekapStart" value="${start}">
+                </div>
+                <div class="form-group" style="flex:1;min-width:140px;margin-bottom:0;">
+                    <label>Sampai</label><input type="date" id="rekapEnd" value="${end}">
+                </div>
                 <button type="button" class="btn btn-primary" id="btnTampilkanRekap">📊 Tampilkan</button>
+                <button type="button" class="btn btn-success" id="btnCetakPDF" disabled>🖨️ Cetak PDF</button>
+                <button type="button" class="btn btn-secondary" id="btnExportExcel" disabled>📥 Export Excel</button>
+            </div>
+            <div style="margin-top: 10px; font-size: 0.8rem; color: #475569;">
+                <strong>Keterangan:</strong> 
+                <span class="badge badge-success">H</span> Hadir &nbsp;
+                <span class="badge badge-info">W</span> WFH &nbsp;
+                <span class="badge badge-warning">C</span> Cuti &nbsp;
+                <span class="badge" style="background:#e0e7ff;color:#1e40af;">D</span> Dinas &nbsp;
+                <span class="badge" style="background:#fce7f3;color:#991b1b;">S</span> Sakit &nbsp;
+                <span class="badge badge-danger">A</span> Alpha
             </div>
         </div>
-        <div id="rekapResult" style="overflow-x: auto;"></div>
+        <div id="rekapResult" style="overflow-x: auto;">
+            <div class="empty-state">Klik tombol "Tampilkan" untuk memuat data.</div>
+        </div>
     `;
 
     document.getElementById('btnTampilkanRekap').onclick = function() { generateRekap(); };
+    
+    // Tombol Print PDF
+    document.getElementById('btnCetakPDF').onclick = function() { 
+        window.print(); 
+    };
+
+    // Tombol Export Excel
+    document.getElementById('btnExportExcel').onclick = function() { 
+        exportToExcel();
+    };
 }
 
 async function generateRekap() {
     const startDate = document.getElementById('rekapStart').value;
     const endDate = document.getElementById('rekapEnd').value;
     const resultDiv = document.getElementById('rekapResult');
-    if (!startDate || !endDate) return showNotification('Pilih tanggal!', 'error');
+    const btnPdf = document.getElementById('btnCetakPDF');
+    const btnExcel = document.getElementById('btnExportExcel');
     
-    resultDiv.innerHTML = '<div class="empty-state">⏳ Memuat...</div>';
+    if (!startDate || !endDate) return showNotification('Pilih tanggal mulai dan selesai!', 'error');
+
+    resultDiv.innerHTML = '<div class="empty-state">⏳ Memuat data rekap...</div>';
+
     try {
         const res = await api('getRekap', { startDate, endDate });
-        if (!res.success) return resultDiv.innerHTML = `<div class="empty-state" style="color:red;">Gagal: ${res.message}</div>`;
+        
+        if (!res.success) {
+            resultDiv.innerHTML = `<div class="empty-state" style="color:red;">Gagal: ${res.message}</div>`;
+            return;
+        }
         
         const { tanggalKerja, matrix } = res.data;
-        if (!tanggalKerja || tanggalKerja.length === 0) return resultDiv.innerHTML = '<div class="empty-state">Tidak ada data.</div>';
+        
+        if (!tanggalKerja || tanggalKerja.length === 0) {
+            resultDiv.innerHTML = '<div class="empty-state">Tidak ada hari kerja pada periode ini.</div>';
+            return;
+        }
 
-        let headerHtml = '<th style="position:sticky; left:0; background:#f1f5f9; z-index:2;">Nama</th>';
+        // Simpan data ke global untuk keperluan export excel
+        window.lastRekapData = { tanggalKerja, matrix };
+
+        // Bangun Header
+        let headerHtml = '<th style="position:sticky; left:0; background:#f1f5f9; z-index:2; min-width:150px;">Nama Karyawan</th>';
         tanggalKerja.forEach(tgl => {
             const d = new Date(tgl);
-            headerHtml += `<th style="text-align:center; padding:4px;">${d.getDate()}</th>`;
+            const dayName = ['Min','Sen','Sel','Rab','Kam','Jum','Sab'][d.getDay()];
+            const dateNum = d.getDate();
+            
+            // Tentukan warna header (Sabtu=3 biru muda, Minggu=0 merah muda)
+            let bgColor = '#f1f5f9';
+            if (d.getDay() === 6) bgColor = '#e0f2fe'; // Sabtu (Biru Langit)
+            else if (d.getDay() === 0) bgColor = '#fce7f3'; // Minggu (Pink)
+
+            headerHtml += `<th style="text-align:center; min-width:35px; padding:4px; background:${bgColor};" title="${tgl}">${dayName}<br>${dateNum}</th>`;
         });
 
+        // Bangun Body
         let bodyHtml = '';
         matrix.forEach(row => {
-            let rowHtml = `<td style="position:sticky; left:0; background:white; z-index:1; font-weight:600;">${row.userName}</td>`;
+            let rowHtml = `<td style="position:sticky; left:0; background:white; z-index:1; font-weight:600;">${row.userName}<br><span style="font-size:0.7rem; font-weight:normal; color:#64748b;">${row.jabatan || '-'}</span></td>`;
+            
             tanggalKerja.forEach(tgl => {
+                const d = new Date(tgl);
                 const status = row.statusHarian[tgl] || '-';
-                let color = '#f1f5f9';
-                if (status === 'H') color = '#d1fae5';
-                else if (status === 'C') color = '#fef3c7';
-                else if (status === 'A') color = '#fee2e2';
-                rowHtml += `<td style="text-align:center; padding:4px;"><span style="display:inline-block; width:24px; height:24px; line-height:24px; border-radius:50%; font-size:0.75rem; font-weight:700; background:${color};">${status}</span></td>`;
+                
+                let bgStatus = '#f1f5f9';
+                let textColor = '#1e293b';
+                if (status === 'H') { bgStatus = '#d1fae5'; textColor = '#065f46'; }
+                else if (status === 'W') { bgStatus = '#dbeafe'; textColor = '#1e40af'; }
+                else if (status === 'C') { bgStatus = '#fef3c7'; textColor = '#92400e'; }
+                else if (status === 'D') { bgStatus = '#e0e7ff'; textColor = '#1e40af'; }
+                else if (status === 'S') { bgStatus = '#fce7f3'; textColor = '#991b1b'; }
+                else if (status === 'A') { bgStatus = '#fee2e2'; textColor = '#991b1b'; }
+
+                // Tentukan background SEL (jika kosong/tidak ada status, beri warna weekend)
+                let cellBg = 'transparent';
+                if (status === '-') {
+                    if (d.getDay() === 6) cellBg = '#f0f9ff'; // Sabtu
+                    else if (d.getDay() === 0) cellBg = '#fdf2f8'; // Minggu
+                }
+
+                rowHtml += `<td style="text-align:center; padding:6px 4px; background:${cellBg};">
+                    <span style="display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:50%; font-size:0.75rem; font-weight:700; background:${bgStatus}; color:${textColor};">${status}</span>
+                </td>`;
             });
             bodyHtml += `<tr>${rowHtml}</tr>`;
         });
 
         resultDiv.innerHTML = `
             <div class="card" style="padding:0; overflow:hidden;">
+                <div style="padding: 10px 20px; background:#f8fafc; border-bottom:1px solid #e2e8f0;">
+                    <strong>Periode:</strong> ${formatDate(startDate)} - ${formatDate(endDate)}
+                </div>
                 <div class="table-container" style="border:none; margin:0;">
-                    <table><thead><tr>${headerHtml}</tr></thead><tbody>${bodyHtml}</tbody></table>
+                    <table style="border-collapse: separate; border-spacing: 0; min-width: 100%;">
+                        <thead><tr>${headerHtml}</tr></thead>
+                        <tbody>${bodyHtml || '<tr><td colspan="100" class="empty-state">Belum ada data</td></tr>'}</tbody>
+                    </table>
                 </div>
             </div>
         `;
-    } catch (err) { resultDiv.innerHTML = `<div class="empty-state" style="color:red;">Error: ${err.message}</div>`; }
+
+        // Aktifkan tombol export
+        btnPdf.disabled = false;
+        btnExcel.disabled = false;
+
+    } catch (err) {
+        console.error(err);
+        resultDiv.innerHTML = `<div class="empty-state" style="color:red;">Error Sistem: ${err.message}</div>`;
+    }
+}
+
+// ============================================================
+// FUNGSI EXPORT EXCEL
+// ============================================================
+function exportToExcel() {
+    if (!window.lastRekapData) return showNotification('Tampilkan data terlebih dahulu!', 'error');
+    
+    const { tanggalKerja, matrix } = window.lastRekapData;
+    const dataExcel = [];
+
+    // Header Baris 1: Tanggal & Hari
+    const row1 = ['Nama Karyawan', 'Jabatan'];
+    const row2 = ['', '']; 
+    tanggalKerja.forEach(tgl => {
+        const d = new Date(tgl);
+        const dayName = ['Min','Sen','Sel','Rab','Kam','Jum','Sab'][d.getDay()];
+        row1.push(tgl); 
+        row2.push(dayName);
+    });
+    dataExcel.push(row1);
+    dataExcel.push(row2);
+
+    // Isi Data
+    matrix.forEach(row => {
+        const dataRow = [row.userName, row.jabatan || '-'];
+        tanggalKerja.forEach(tgl => {
+            dataRow.push(row.statusHarian[tgl] || '-');
+        });
+        dataExcel.push(dataRow);
+    });
+
+    // Buat Workbook
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(dataExcel);
+
+    // Set lebar kolom (otomatis)
+    const wscols = [{ wch: 25 }, { wch: 20 }];
+    for (let i = 0; i < tanggalKerja.length; i++) wscols.push({ wch: 5 });
+    ws['!cols'] = wscols;
+
+    XLSX.utils.book_append_sheet(wb, ws, 'Rekap Absensi');
+    XLSX.writeFile(wb, `Rekap_Absensi_${todayStr()}.xlsx`);
+    
+    showNotification('📥 File Excel berhasil diunduh!');
 }
 
 // ============================================================
