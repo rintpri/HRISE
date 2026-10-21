@@ -468,28 +468,43 @@ async function generateRekap() {
     const startDate = document.getElementById('rekapStart').value, endDate = document.getElementById('rekapEnd').value, resultDiv = document.getElementById('rekapResult');
     if (!startDate || !endDate) return showNotification('Pilih tanggal!', 'error');
     resultDiv.innerHTML = '<div class="empty-state">⏳ Memuat data rekap...</div>';
+    
     try {
         const res = await api('getRekap', { startDate, endDate });
         if (!res.success) return resultDiv.innerHTML = `<div class="empty-state" style="color:red;">Gagal: ${res.message}</div>`;
+        
         const { tanggalKerja, matrix } = res.data;
         if (!tanggalKerja || tanggalKerja.length === 0) return resultDiv.innerHTML = '<div class="empty-state">Tidak ada data.</div>';
         
-        window.lastRekapData = { tanggalKerja, matrix }; // Simpan untuk Excel
+        window.lastRekapData = { tanggalKerja, matrix };
 
+        // 1. BANGUN HEADER (Warna Sabtu/Minggu)
         let headerHtml = '<th style="position:sticky; left:0; background:#f1f5f9; z-index:2;">Nama</th>';
         tanggalKerja.forEach(tgl => {
             const d = new Date(tgl), dayName = ['Min','Sen','Sel','Rab','Kam','Jum','Sab'][d.getDay()], dateNum = d.getDate();
-            let bgColor = '#f1f5f9';
-            if (d.getDay() === 6) bgColor = '#e0f2fe'; // Sabtu Biru
-            else if (d.getDay() === 0) bgColor = '#fce7f3'; // Minggu Pink
-            headerHtml += `<th style="text-align:center; padding:4px; background:${bgColor};" title="${tgl}">${dayName}<br>${dateNum}</th>`;
+            let bgColor = '#f1f5f9'; // Default (Weekday)
+            if (d.getDay() === 6) bgColor = '#bae6fd'; // Sabtu (Biru lebih tebal)
+            else if (d.getDay() === 0) bgColor = '#fbcfe8'; // Minggu (Pink lebih tebal)
+            
+            headerHtml += `<th style="text-align:center; padding:4px; background:${bgColor}; color:#1e293b;" title="${tgl}">${dayName}<br>${dateNum}</th>`;
         });
 
+        // 2. BANGUN BODY (Warna Sabtu/Minggu Tetap Terlihat Walau Ada Absensi)
         let bodyHtml = '';
         matrix.forEach(row => {
             let rowHtml = `<td style="position:sticky; left:0; background:white; z-index:1; font-weight:600;">${row.userName}<br><span style="font-size:0.7rem; font-weight:normal; color:#64748b;">${row.jabatan || '-'}</span></td>`;
+            
             tanggalKerja.forEach(tgl => {
-                const d = new Date(tgl), status = row.statusHarian[tgl] || '-';
+                const d = new Date(tgl);
+                const isWeekend = d.getDay() === 6 || d.getDay() === 0;
+                const status = row.statusHarian[tgl] || '-';
+                
+                // Tentukan warna dasar sel
+                let cellBg = 'transparent';
+                if (d.getDay() === 6) cellBg = '#e0f2fe'; // Sabtu Biru
+                else if (d.getDay() === 0) cellBg = '#fce7f3'; // Minggu Pink
+
+                // Tentukan warna badge status
                 let bgStatus = '#f1f5f9', textColor = '#1e293b';
                 if (status === 'H') { bgStatus = '#d1fae5'; textColor = '#065f46'; }
                 else if (status === 'W') { bgStatus = '#dbeafe'; textColor = '#1e40af'; }
@@ -497,11 +512,14 @@ async function generateRekap() {
                 else if (status === 'D') { bgStatus = '#e0e7ff'; textColor = '#1e40af'; }
                 else if (status === 'S') { bgStatus = '#fce7f3'; textColor = '#991b1b'; }
                 else if (status === 'A') { bgStatus = '#fee2e2'; textColor = '#991b1b'; }
-                
-                let cellBg = 'transparent';
-                if (status === '-') { if (d.getDay() === 6) cellBg = '#f0f9ff'; else if (d.getDay() === 0) cellBg = '#fdf2f8'; }
 
-                rowHtml += `<td style="text-align:center; padding:6px 4px; background:${cellBg};"><span style="display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:50%; font-size:0.75rem; font-weight:700; background:${bgStatus}; color:${textColor};">${status}</span></td>`;
+                // Jika weekend dan ada status, beri border putih pada badge agar terlihat kontras
+                let badgeStyle = `display:inline-flex; align-items:center; justify-content:center; width:24px; height:24px; border-radius:50%; font-size:0.75rem; font-weight:700; background:${bgStatus}; color:${textColor};`;
+                if (isWeekend) badgeStyle += ' border: 1px solid white; box-shadow: 0 1px 3px rgba(0,0,0,0.1);';
+
+                rowHtml += `<td style="text-align:center; padding:6px 4px; background:${cellBg};">
+                    <span style="${badgeStyle}">${status}</span>
+                </td>`;
             });
             bodyHtml += `<tr>${rowHtml}</tr>`;
         });
@@ -518,7 +536,9 @@ async function generateRekap() {
         `;
         document.getElementById('btnCetakPDF').disabled = false;
         document.getElementById('btnExportExcel').disabled = false;
-    } catch (err) { resultDiv.innerHTML = `<div class="empty-state" style="color:red;">Error: ${err.message}</div>`; }
+    } catch (err) { 
+        resultDiv.innerHTML = `<div class="empty-state" style="color:red;">Error: ${err.message}</div>`; 
+    }
 }
 
 function exportToExcel() {
